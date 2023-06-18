@@ -10,8 +10,7 @@ fn feature() {
 
     tracing::subscriber::set_global_default(subscriber).unwrap();
 
-    info!(ola = "salve", "hello there");
-    some_test("some value");
+    some_test("Kevin");
 }
 
 #[instrument(fields(hello = "world"))]
