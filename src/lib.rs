@@ -1,20 +1,75 @@
 use chrono::Utc;
 use std::{collections::HashMap, io::Write};
-use tracing::{field::Visit, Subscriber};
-use tracing_subscriber::{registry::LookupSpan, Layer};
+use tracing::{field::Visit, span::Attributes, Event, Id, Metadata, Subscriber};
+use tracing_subscriber::{
+    layer::Context,
+    registry::{self, LookupSpan},
+    Layer,
+};
 
 #[derive(Default)]
 pub struct DatadogFormattingLayer;
 
+type FieldPair = (String, String);
+
+#[derive(Debug, Clone)]
+struct Fields {
+    fields: Vec<FieldPair>,
+}
+
 impl<S: Subscriber + for<'a> LookupSpan<'a>> Layer<S> for DatadogFormattingLayer {
-    fn on_event(
-        &self,
-        event: &tracing::Event<'_>,
-        // TODO: The context contains the spans which contain extentions which contain fields and stuff
-        // (BUT we need to record that aswell)
-        _ctx: tracing_subscriber::layer::Context<'_, S>,
-    ) {
-        let formatted_event = self.format_event(event);
+    fn on_new_span(&self, attrs: &Attributes<'_>, id: &Id, ctx: Context<'_, S>) {
+        let span = ctx.span(id).expect("Span not found, this is a bug");
+        let mut extensions = span.extensions_mut();
+
+        let mut visitor = Visitor::default();
+        attrs.values().record(&mut visitor);
+
+        let fields = visitor
+            .fields
+            .iter()
+            .map(|(key, value)| (key.clone(), value.clone()))
+            .collect::<Vec<FieldPair>>();
+
+        // insert fields from new span e.g #[instrument(fields(hello = "world"))]
+        if extensions.get_mut::<Fields>().is_none() {
+            extensions.insert(Fields { fields });
+        }
+    }
+
+    // IDEA: maybe a on record implementation is required here
+
+    fn on_event(&self, event: &Event<'_>, ctx: Context<'_, S>) {
+        let mut all_fields = vec![];
+
+        // parse context
+        for span in ctx
+            .event_scope(event)
+            .into_iter()
+            .flat_map(registry::Scope::from_root)
+        {
+            let exts = span.extensions();
+            let fields_from_span = exts.get::<Fields>().unwrap().to_owned();
+            all_fields.extend(fields_from_span.fields)
+        }
+
+        // parse event fields
+        let mut visitor = Visitor::default();
+        event.record(&mut visitor);
+
+        let message = visitor.fields.get("message").cloned().unwrap_or_default();
+
+        let mut fields = visitor
+            .fields
+            .iter()
+            .map(|(key, value)| (key.clone(), value.clone()))
+            .collect::<Vec<FieldPair>>();
+
+        // reason for extending fields with all_fields is the order of fields in the message
+        fields.extend(all_fields);
+
+        // format and serialize the event metadata and fields
+        let formatted_event = self.format_event(message, event.metadata(), fields);
         let serialized_event = serde_json::to_string(&formatted_event).unwrap();
 
         // the fmt layer does some fucking magic to get a mutable ref to a generic Writer
@@ -24,14 +79,13 @@ impl<S: Subscriber + for<'a> LookupSpan<'a>> Layer<S> for DatadogFormattingLayer
 }
 
 impl DatadogFormattingLayer {
-    fn format_event(&self, event: &tracing::Event<'_>) -> DatadogFormattedEvent {
-        let meta = event.metadata();
-        let mut visitor = Visitor::default();
-        event.record(&mut visitor);
-
-        let mut message = visitor.fields.get("message").unwrap().to_string();
-
-        visitor.fields.iter().for_each(|(key, value)| {
+    fn format_event(
+        &self,
+        mut message: String,
+        meta: &Metadata,
+        fields: Vec<FieldPair>,
+    ) -> DatadogFormattedEvent {
+        fields.iter().for_each(|(key, value)| {
             if key != "message" {
                 message.push_str(&format!(
                     " {}={}",
@@ -41,24 +95,8 @@ impl DatadogFormattingLayer {
             }
         });
 
-        // for span in ctx
-        //     .event_scope(event)
-        //     .into_iter()
-        //     .flat_map(registry::Scope::from_root)
-        // {
-        //     let exts = span.extensions();
-        //     let maybe_exts = exts.get::<FormattedFields<String>>();
-        //     println!("FIELDS: {:?}", maybe_exts);
-        //     if let Some(fields) = maybe_exts {
-        //         if !fields.is_empty() {
-        //             println!("FIELDS: {:?}", fields);
-        //         }
-        //     }
-        // }
-        //
-
         // IDEA: maybe loggerName instead of target
-        //
+        // IDEA: maybe use fields as attributes or something
         DatadogFormattedEvent {
             timestamp: Utc::now().to_rfc3339(),
             level: meta.level().to_string(),
@@ -81,7 +119,7 @@ impl Visit for Visitor {
 }
 
 #[derive(Debug, serde::Serialize)]
-pub struct DatadogFormattedEvent {
+struct DatadogFormattedEvent {
     timestamp: String,
     level: String,
     message: String,

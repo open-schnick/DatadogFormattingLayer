@@ -1,9 +1,10 @@
 [package]
-name = "sub"
+name = "datadog-formatting-layer"
+description = "This crates provides a tracing layer to format events for datadog"
+author = ["open-schnick <dev2@filefighter.de>"]
 version = "0.1.0"
 edition = "2021"
 
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
 chrono = "0.4.26"
