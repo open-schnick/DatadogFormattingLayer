@@ -3,6 +3,7 @@ use std::{collections::HashMap, io::Write};
 use tracing::{field::Visit, Subscriber};
 use tracing_subscriber::{registry::LookupSpan, Layer};
 
+#[derive(Default)]
 pub struct DatadogFormattingLayer;
 
 impl<S: Subscriber + for<'a> LookupSpan<'a>> Layer<S> for DatadogFormattingLayer {
@@ -16,8 +17,8 @@ impl<S: Subscriber + for<'a> LookupSpan<'a>> Layer<S> for DatadogFormattingLayer
         let formatted_event = self.format_event(event);
         let serialized_event = serde_json::to_string(&formatted_event).unwrap();
 
-        // FIXME: creating a new handle might not be the best thing
-        // the fmt layer does some fucking magic
+        // the fmt layer does some fucking magic to get a mutable ref to a generic Writer
+        #[allow(clippy::explicit_write)]
         writeln!(std::io::stdout(), "{serialized_event}").unwrap();
     }
 }
@@ -31,11 +32,13 @@ impl DatadogFormattingLayer {
         let mut message = visitor.fields.get("message").unwrap().to_string();
 
         visitor.fields.iter().for_each(|(key, value)| {
-            message.push_str(&format!(
-                " {}={}",
-                key,
-                value.trim_start_matches("\"").trim_end_matches("\"")
-            ))
+            if key != "message" {
+                message.push_str(&format!(
+                    " {}={}",
+                    key,
+                    value.trim_start_matches('\"').trim_end_matches('\"')
+                ))
+            }
         });
 
         // for span in ctx
