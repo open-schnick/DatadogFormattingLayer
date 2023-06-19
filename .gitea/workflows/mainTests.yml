@@ -15,10 +15,8 @@ jobs:
         with:
           toolchain: stable
           components: rustfmt, clippy
-      - name: Setup Rust Cache
-        uses: https://github.com/Swatinem/rust-cache@v2
       - name: Checks and Tests
         run: |
           cargo fmt --all -- --check
-          cargo clippy --all
+          cargo clippy --all -- -D
           cargo test --all
