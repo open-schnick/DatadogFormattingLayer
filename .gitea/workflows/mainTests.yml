@@ -18,5 +18,5 @@ jobs:
       - name: Checks and Tests
         run: |
           cargo fmt --all -- --check
-          cargo clippy --all -- -D
+          cargo clippy --all -- -D warnings
           cargo test --all
