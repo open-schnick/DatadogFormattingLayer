@@ -8,7 +8,7 @@ homepage = "https://github.com/open-schnick/DatadogFormattingLayer"
 repository = "https://github.com/open-schnick/DatadogFormattingLayer"
 license = "Apache-2.0"
 keywords = ["tracing", "tracing-subscriber", "layer", "datadog"]
-version = "1.0.0"
+version = "1.0.1"
 edition = "2021"
 
 [dependencies]
