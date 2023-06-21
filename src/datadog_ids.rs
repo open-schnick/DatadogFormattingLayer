@@ -14,10 +14,24 @@ pub struct DatadogIds {
     pub span_id: DatadogId,
 }
 
+#[allow(clippy::fallible_impl_from)]
 impl From<TraceId> for DatadogId {
+    // TraceId are u128 -> 16 Bytes
+    // but datadog needs u64 -> 8 Bytes
+    // Therefore we just take the 8 most significant bytes
+    // This is not ideal and may lead to duplicate trace correlations
+    // but whe cannot do anything against that anyways.
     fn from(value: TraceId) -> Self {
-        let bytes = &value.to_bytes()[std::mem::size_of::<u64>()..std::mem::size_of::<u128>()];
-        Self(u64::from_be_bytes(bytes.try_into().unwrap()))
+        let bytes = value.to_bytes();
+        // this cannot fail
+        #[allow(clippy::unwrap_used)]
+        let most_significant_8_bytes = bytes.get(8..16).unwrap();
+
+        // this also cannot fail because we checked the range one line above
+        #[allow(clippy::unwrap_used)]
+        let bytes_as_sized_slice: [u8; 8] = most_significant_8_bytes.try_into().unwrap();
+
+        Self(u64::from_be_bytes(bytes_as_sized_slice))
     }
 }
 

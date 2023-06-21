@@ -17,7 +17,9 @@ pub struct DatadogFormattingLayer;
 
 impl<S: Subscriber + for<'a> LookupSpan<'a>> Layer<S> for DatadogFormattingLayer {
     fn on_new_span(&self, attrs: &Attributes<'_>, id: &Id, ctx: Context<'_, S>) {
+        #[allow(clippy::expect_used)]
         let span = ctx.span(id).expect("Span not found, this is a bug");
+
         let mut extensions = span.extensions_mut();
 
         let fields = fields::from_attributes(attrs);
@@ -39,9 +41,14 @@ impl<S: Subscriber + for<'a> LookupSpan<'a>> Layer<S> for DatadogFormattingLayer
             .into_iter()
             .flat_map(Scope::from_root)
         {
-            let exts = span.extensions();
-            let fields_from_span = exts.get::<Fields>().unwrap().to_owned();
-            all_fields.extend(fields_from_span.fields)
+            #[allow(clippy::expect_used)]
+            let fields_from_span = span
+                .extensions()
+                .get::<Fields>()
+                .expect("No Fields found in span extensions. This is a tracing bug.")
+                .clone();
+
+            all_fields.extend(fields_from_span.fields);
         }
 
         // parse event fields
@@ -61,8 +68,9 @@ impl<S: Subscriber + for<'a> LookupSpan<'a>> Layer<S> for DatadogFormattingLayer
         let datadog_ids = datadog_ids::read_from_context(&ctx);
 
         // format and serialize the event metadata and fields
-        let formatted_event = self.format_event(message, event.metadata(), fields, datadog_ids);
-        let serialized_event = serde_json::to_string(&formatted_event).unwrap();
+        let formatted_event = Self::format_event(message, event.metadata(), &fields, datadog_ids);
+        let serialized_event = serde_json::to_string(&formatted_event)
+            .unwrap_or_else(|_| "Failed to serialize an event to json".to_string());
 
         // the fmt layer does some magic to get a mutable ref to a generic Writer
         #[allow(clippy::explicit_write)]
@@ -72,18 +80,17 @@ impl<S: Subscriber + for<'a> LookupSpan<'a>> Layer<S> for DatadogFormattingLayer
 
 impl DatadogFormattingLayer {
     fn format_event(
-        &self,
         mut message: String,
         meta: &Metadata,
-        fields: Vec<FieldPair>,
+        fields: &[FieldPair],
         datadog_ids: Option<DatadogIds>,
     ) -> DatadogFormattedEvent {
-        fields.iter().for_each(|(key, value)| {
+        for (name, value) in fields.iter() {
             // message is just a regular field
-            if key != "message" {
-                message.push_str(&format!(" {}={}", key, value.trim_matches('\"')))
+            if name != "message" {
+                message.push_str(&format!(" {}={}", name, value.trim_matches('\"')));
             }
-        });
+        }
 
         // FIXME: refactor this
         let ids = {
