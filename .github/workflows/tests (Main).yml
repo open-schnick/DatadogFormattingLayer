@@ -47,8 +47,22 @@ jobs:
       - name: Linting
         run: cargo lints clippy
 
+  deny:
+    name: Checks
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+      - uses: Swatinem/rust-cache@v2
+      - name: Install cargo-deny
+        run: cargo install cargo-deny
+      - name: Checking crate
+        run: cargo deny check
+
   coverage:
-    name: Code coverage
+    name: Coverage
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
