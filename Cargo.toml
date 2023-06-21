@@ -1,10 +1,15 @@
 [package]
 name = "datadog-formatting-layer"
-description = "This crates provides a tracing layer to format events for datadog"
-authors = ["open-schnick <dev2@filefighter.de>"]
+description = "A crate providing a tracing-subscriber layer for formatting events so Datadog can parse them"
+authors = ["Open Schnick"]
+documentation = "https://docs.rs/datadog-formatting-layer"
+readme = "README.md"
+homepage = "https://github.com/open-schnick/DatadogFormattingLayer"
+repository = "https://github.com/open-schnick/DatadogFormattingLayer"
+license = "Apache-2.0"
+keywords = ["tracing", "tracing-subscriber", "layer", "datadog"]
 version = "0.1.0"
 edition = "2021"
-
 
 [dependencies]
 chrono = "0.4.26"
