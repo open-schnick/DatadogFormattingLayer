@@ -1,35 +1,26 @@
 use chrono::Utc;
-use std::{collections::HashMap, io::Write};
-use tracing::{field::Visit, span::Attributes, Event, Id, Metadata, Subscriber};
+use datadog_ids::{DatadogId, DatadogIds};
+use fields::{FieldPair, Fields};
+use std::io::Write;
+use tracing::{span::Attributes, Event, Id, Metadata, Subscriber};
 use tracing_subscriber::{
     layer::Context,
-    registry::{self, LookupSpan},
+    registry::{LookupSpan, Scope},
     Layer,
 };
 
+mod datadog_ids;
+mod fields;
+
 #[derive(Default)]
 pub struct DatadogFormattingLayer;
-
-type FieldPair = (String, String);
-
-#[derive(Debug, Clone)]
-struct Fields {
-    fields: Vec<FieldPair>,
-}
 
 impl<S: Subscriber + for<'a> LookupSpan<'a>> Layer<S> for DatadogFormattingLayer {
     fn on_new_span(&self, attrs: &Attributes<'_>, id: &Id, ctx: Context<'_, S>) {
         let span = ctx.span(id).expect("Span not found, this is a bug");
         let mut extensions = span.extensions_mut();
 
-        let mut visitor = Visitor::default();
-        attrs.values().record(&mut visitor);
-
-        let fields = visitor
-            .fields
-            .iter()
-            .map(|(key, value)| (key.clone(), value.clone()))
-            .collect::<Vec<FieldPair>>();
+        let fields = fields::from_attributes(attrs);
 
         // insert fields from new span e.g #[instrument(fields(hello = "world"))]
         if extensions.get_mut::<Fields>().is_none() {
@@ -46,7 +37,7 @@ impl<S: Subscriber + for<'a> LookupSpan<'a>> Layer<S> for DatadogFormattingLayer
         for span in ctx
             .event_scope(event)
             .into_iter()
-            .flat_map(registry::Scope::from_root)
+            .flat_map(Scope::from_root)
         {
             let exts = span.extensions();
             let fields_from_span = exts.get::<Fields>().unwrap().to_owned();
@@ -54,22 +45,23 @@ impl<S: Subscriber + for<'a> LookupSpan<'a>> Layer<S> for DatadogFormattingLayer
         }
 
         // parse event fields
-        let mut visitor = Visitor::default();
-        event.record(&mut visitor);
+        let mut fields = fields::from_event(event);
 
-        let message = visitor.fields.get("message").cloned().unwrap_or_default();
-
-        let mut fields = visitor
-            .fields
+        // find message if present in fields
+        let message = fields
             .iter()
-            .map(|(key, value)| (key.clone(), value.clone()))
-            .collect::<Vec<FieldPair>>();
+            .find(|pair| pair.0 == "message")
+            .map(|pair| pair.1.clone())
+            .unwrap_or_default();
 
         // reason for extending fields with all_fields is the order of fields in the message
         fields.extend(all_fields);
 
+        // look for datadog trace- and span-id
+        let datadog_ids = datadog_ids::read_from_context(&ctx);
+
         // format and serialize the event metadata and fields
-        let formatted_event = self.format_event(message, event.metadata(), fields);
+        let formatted_event = self.format_event(message, event.metadata(), fields, datadog_ids);
         let serialized_event = serde_json::to_string(&formatted_event).unwrap();
 
         // the fmt layer does some fucking magic to get a mutable ref to a generic Writer
@@ -84,16 +76,22 @@ impl DatadogFormattingLayer {
         mut message: String,
         meta: &Metadata,
         fields: Vec<FieldPair>,
+        datadog_ids: Option<DatadogIds>,
     ) -> DatadogFormattedEvent {
         fields.iter().for_each(|(key, value)| {
+            // message is just a regular field
             if key != "message" {
-                message.push_str(&format!(
-                    " {}={}",
-                    key,
-                    value.trim_start_matches('\"').trim_end_matches('\"')
-                ))
+                message.push_str(&format!(" {}={}", key, value.trim_matches('\"')))
             }
         });
+
+        // FIXME: refactor me pls
+        let ids = {
+            match datadog_ids {
+                Some(ids) => (Some(ids.span_id), Some(ids.trace_id)),
+                None => (None, None),
+            }
+        };
 
         // IDEA: maybe loggerName instead of target
         // IDEA: maybe use fields as attributes or something
@@ -102,19 +100,9 @@ impl DatadogFormattingLayer {
             level: meta.level().to_string(),
             message,
             target: meta.target().to_string(),
+            datadog_span_id: ids.0,
+            datadog_trace_id: ids.1,
         }
-    }
-}
-
-#[derive(Default)]
-struct Visitor {
-    fields: HashMap<String, String>,
-}
-
-impl Visit for Visitor {
-    fn record_debug(&mut self, field: &tracing::field::Field, value: &dyn std::fmt::Debug) {
-        self.fields
-            .insert(field.name().to_string(), format!("{:?}", value));
     }
 }
 
@@ -124,4 +112,8 @@ struct DatadogFormattedEvent {
     level: String,
     message: String,
     target: String,
+    #[serde(skip_serializing_if = "Option::is_none", rename = "dd.trace_id")]
+    datadog_trace_id: Option<DatadogId>,
+    #[serde(skip_serializing_if = "Option::is_none", rename = "dd.span_id")]
+    datadog_span_id: Option<DatadogId>,
 }
