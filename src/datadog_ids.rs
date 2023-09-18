@@ -49,7 +49,7 @@ where
         .and_then(|span_ref| lookup_datadog_ids(&span_ref))
 }
 
-fn lookup_datadog_ids<S>(span_ref: &SpanRef<S>) -> Option<DatadogIds>
+fn lookup_datadog_ids<S>(span_ref: &SpanRef<'_, S>) -> Option<DatadogIds>
 where
     S: Subscriber + for<'a> LookupSpan<'a>,
 {
