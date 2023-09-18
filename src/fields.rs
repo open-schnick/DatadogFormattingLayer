@@ -31,7 +31,7 @@ pub fn from_attributes(attrs: &Attributes<'_>) -> Vec<FieldPair> {
         .collect::<Vec<FieldPair>>()
 }
 
-pub fn from_event(event: &tracing::Event) -> Vec<FieldPair> {
+pub fn from_event(event: &tracing::Event<'_>) -> Vec<FieldPair> {
     let mut visitor = Visitor::default();
     event.record(&mut visitor);
 

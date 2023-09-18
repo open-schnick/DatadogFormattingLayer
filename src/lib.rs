@@ -92,6 +92,13 @@
 //! {"timestamp":"2023-06-21T10:36:50.363384118+00:00","level":"INFO","message":"Bla fasel user=Jack ola=salve value=Fasel hello=world","target":"otel","dd.trace_id":0,"dd.span_id":10201226522570980512}
 //! ```
 
+#![deny(rust_2018_idioms)]
+#![deny(clippy::correctness)]
+#![deny(clippy::perf)]
+#![deny(clippy::all)]
+#![deny(clippy::pedantic)]
+#![allow(clippy::module_name_repetitions)]
+
 mod datadog_ids;
 mod fields;
 mod layer;

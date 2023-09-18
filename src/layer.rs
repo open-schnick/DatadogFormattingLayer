@@ -81,11 +81,11 @@ impl<S: Subscriber + for<'a> LookupSpan<'a>> Layer<S> for DatadogFormattingLayer
 impl DatadogFormattingLayer {
     fn format_event(
         mut message: String,
-        meta: &Metadata,
+        meta: &Metadata<'_>,
         fields: &[FieldPair],
         datadog_ids: Option<DatadogIds>,
     ) -> DatadogFormattedEvent {
-        for (name, value) in fields.iter() {
+        for (name, value) in fields {
             // message is just a regular field
             if name != "message" {
                 message.push_str(&format!(" {}={}", name, value.trim_matches('\"')));
