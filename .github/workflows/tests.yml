@@ -40,10 +40,8 @@ jobs:
         with:
           toolchain: stable
       - uses: Swatinem/rust-cache@v2
-      - name: Install cargo-lints
-        run: cargo install cargo-lints
       - name: Linting
-        run: cargo lints clippy
+        run: cargo clippy
 
   deny:
     name: Checks
