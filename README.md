@@ -2,6 +2,10 @@
 
 A crate providing a tracing-subscriber layer for formatting events so Datadog can parse them.
 
+![Build](https://github.com/open-schnick/DatadogFormattingLayer/actions/workflows/tests.yml/badge.svg)
+![License](https://img.shields.io/crates/l/datadog-formatting-layer)
+![Crates.io](https://img.shields.io/crates/v/datadog-formatting-layer)
+
 ## Features
 
 - Provides a layer for tracing-subscriber
