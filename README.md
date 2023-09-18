@@ -99,3 +99,10 @@ Otherwise the following output will be printed to stdout
 {"timestamp":"2023-06-21T10:36:50.363224217+00:00","level":"INFO","message":"Hello World! user=Jack","target":"otel"}
 {"timestamp":"2023-06-21T10:36:50.363384118+00:00","level":"INFO","message":"Bla fasel user=Jack ola=salve value=Fasel hello=world","target":"otel","dd.trace_id":0,"dd.span_id":10201226522570980512}
 ```
+
+## Supported Opentelemetry versions:
+
+| Opentelemetry | DatadogFormattingLayer |
+| ------------- | ---------------------- |
+| 0.20.\*       | 1.1.\*                 |
+| 0.19.\*       | 1.0.\*                 |
