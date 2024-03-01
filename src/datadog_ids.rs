@@ -53,8 +53,10 @@ fn lookup_datadog_ids<S>(span_ref: &SpanRef<'_, S>) -> Option<DatadogIds>
 where
     S: Subscriber + for<'a> LookupSpan<'a>,
 {
-    span_ref.extensions().get::<OtelData>().map(|o| DatadogIds {
-        trace_id: o.parent_cx.span().span_context().trace_id().into(),
-        span_id: o.builder.span_id.unwrap_or(SpanId::INVALID).into(),
+    span_ref.extensions().get::<OtelData>().map(|o| {
+        DatadogIds {
+            trace_id: o.parent_cx.span().span_context().trace_id().into(),
+            span_id: o.builder.span_id.unwrap_or(SpanId::INVALID).into(),
+        }
     })
 }
