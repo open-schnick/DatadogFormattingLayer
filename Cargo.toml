@@ -25,3 +25,5 @@ opentelemetry = { version = "0.20.0", default-features = false }
 
 [dev-dependencies]
 opentelemetry-datadog = { version = "0.8.0", features = ["reqwest-client"] }
+regex = "1.10.3"
+smoothy = "0.4.3"

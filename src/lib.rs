@@ -124,6 +124,16 @@
     missing_docs
 )]
 #![allow(clippy::module_name_repetitions)]
+// Disable certain lints in tests
+#![cfg_attr(
+    test,
+    allow(
+        clippy::pedantic,
+        clippy::as_conversions,
+        clippy::indexing_slicing,
+        clippy::unwrap_used
+    )
+)]
 
 mod datadog_ids;
 mod fields;
