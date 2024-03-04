@@ -1,11 +1,61 @@
 use std::collections::HashMap;
-use tracing::{field::Visit, span::Attributes};
-
-pub type FieldPair = (String, String);
+use tracing::{field::Visit, span::Attributes, Event, Subscriber};
+use tracing_subscriber::{
+    layer::Context,
+    registry::{LookupSpan, Scope},
+};
 
 #[derive(Debug, Clone)]
-pub struct Fields {
+pub struct FieldStore {
     pub fields: Vec<FieldPair>,
+}
+
+#[derive(Debug, Clone)]
+pub struct FieldPair {
+    pub name: String,
+    pub value: String,
+}
+
+pub fn from_attributes(attrs: &Attributes<'_>) -> Vec<FieldPair> {
+    let mut visitor = Visitor::default();
+    attrs.values().record(&mut visitor);
+
+    visitor
+        .fields
+        .into_iter()
+        .map(|(key, value)| FieldPair { name: key, value })
+        .collect()
+}
+
+pub fn from_event(event: &tracing::Event<'_>) -> Vec<FieldPair> {
+    let mut visitor = Visitor::default();
+    event.record(&mut visitor);
+
+    visitor
+        .fields
+        .into_iter()
+        .map(|(key, value)| FieldPair { name: key, value })
+        .collect()
+}
+
+pub fn from_spans<S: Subscriber + for<'a> LookupSpan<'a>>(
+    ctx: &Context<'_, S>,
+    event: &Event<'_>,
+) -> Vec<FieldPair> {
+    ctx.event_scope(event)
+        .into_iter()
+        .flat_map(Scope::from_root)
+        .flat_map(|span| {
+            #[allow(clippy::expect_used)]
+            let fields_from_span = span
+                .extensions()
+                .get::<FieldStore>()
+                .expect("No Fields found in span extensions")
+                .clone();
+
+            fields_from_span.fields
+        })
+        .collect()
 }
 
 #[derive(Default)]
@@ -18,26 +68,4 @@ impl Visit for Visitor {
         self.fields
             .insert(field.name().to_string(), format!("{value:?}"));
     }
-}
-
-pub fn from_attributes(attrs: &Attributes<'_>) -> Vec<FieldPair> {
-    let mut visitor = Visitor::default();
-    attrs.values().record(&mut visitor);
-
-    visitor
-        .fields
-        .iter()
-        .map(|(key, value)| (key.clone(), value.clone()))
-        .collect::<Vec<FieldPair>>()
-}
-
-pub fn from_event(event: &tracing::Event<'_>) -> Vec<FieldPair> {
-    let mut visitor = Visitor::default();
-    event.record(&mut visitor);
-
-    visitor
-        .fields
-        .iter()
-        .map(|(key, value)| (key.clone(), value.clone()))
-        .collect::<Vec<FieldPair>>()
 }
