@@ -1,9 +1,9 @@
 use crate::{
     datadog_ids::{self, DatadogId, DatadogIds},
+    event_sink::{EventSink, StdoutSink},
     fields::{self, FieldPair, Fields},
 };
 use chrono::Utc;
-use std::io::Write;
 use tracing::{span::Attributes, Event, Id, Metadata, Subscriber};
 use tracing_subscriber::{
     layer::Context,
@@ -12,10 +12,28 @@ use tracing_subscriber::{
 };
 
 /// The layer responsible for formatting tracing events in a way datadog can parse them
-#[derive(Default)]
-pub struct DatadogFormattingLayer;
+#[non_exhaustive]
+#[derive(Debug, Clone)]
+pub struct DatadogFormattingLayer<Sink: EventSink + 'static> {
+    event_sink: Sink,
+}
 
-impl<S: Subscriber + for<'a> LookupSpan<'a>> Layer<S> for DatadogFormattingLayer {
+impl<S: EventSink + 'static> DatadogFormattingLayer<S> {
+    /// Create a new `DatadogFormattingLayer` with the provided event sink
+    pub const fn with_sink(sink: S) -> Self {
+        Self { event_sink: sink }
+    }
+}
+
+impl Default for DatadogFormattingLayer<StdoutSink> {
+    fn default() -> Self {
+        Self::with_sink(StdoutSink::default())
+    }
+}
+
+impl<S: Subscriber + for<'a> LookupSpan<'a>, Sink: EventSink + 'static> Layer<S>
+    for DatadogFormattingLayer<Sink>
+{
     fn on_new_span(&self, attrs: &Attributes<'_>, id: &Id, ctx: Context<'_, S>) {
         #[allow(clippy::expect_used)]
         let span = ctx.span(id).expect("Span not found, this is a bug");
@@ -72,13 +90,11 @@ impl<S: Subscriber + for<'a> LookupSpan<'a>> Layer<S> for DatadogFormattingLayer
         let serialized_event = serde_json::to_string(&formatted_event)
             .unwrap_or_else(|_| "Failed to serialize an event to json".to_string());
 
-        // the fmt layer does some magic to get a mutable ref to a generic Writer
-        #[allow(clippy::explicit_write)]
-        writeln!(std::io::stdout(), "{serialized_event}").unwrap();
+        self.event_sink.write(serialized_event);
     }
 }
 
-impl DatadogFormattingLayer {
+impl<Sink: EventSink + 'static> DatadogFormattingLayer<Sink> {
     fn format_event(
         mut message: String,
         meta: &Metadata<'_>,

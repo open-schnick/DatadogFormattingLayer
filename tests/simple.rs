@@ -5,7 +5,7 @@ use tracing_subscriber::prelude::*;
 #[test]
 fn works() {
     tracing_subscriber::registry()
-        .with(DatadogFormattingLayer)
+        .with(DatadogFormattingLayer::default())
         .init();
 
     warn!("Warning");

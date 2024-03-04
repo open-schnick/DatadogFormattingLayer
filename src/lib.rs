@@ -22,7 +22,7 @@
 //! use tracing_subscriber::prelude::*;
 //!
 //! tracing_subscriber::registry()
-//!     .with(DatadogFormattingLayer)
+//!     .with(DatadogFormattingLayer::default())
 //!     .init();
 //!
 //! info!(user = "Jack", "Hello World!");
@@ -66,7 +66,7 @@
 //!
 //! // Use both the tracer and the formatting layer
 //! tracing_subscriber::registry()
-//!     .with(DatadogFormattingLayer)
+//!     .with(DatadogFormattingLayer::default())
 //!     .with(tracing_opentelemetry::layer().with_tracer(tracer))
 //!     .init();
 //!
@@ -136,8 +136,10 @@
 )]
 
 mod datadog_ids;
+mod event_sink;
 mod fields;
 mod layer;
 
 // reexport
+pub use event_sink::{EventSink, StdoutSink};
 pub use layer::DatadogFormattingLayer;
