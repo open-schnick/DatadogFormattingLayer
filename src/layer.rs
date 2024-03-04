@@ -1,15 +1,11 @@
 use crate::{
-    datadog_ids::{self, DatadogId, DatadogIds},
+    datadog_ids::{self, DatadogId},
     event_sink::{EventSink, StdoutSink},
-    fields::{self, FieldPair, Fields},
+    fields::{self, FieldPair, FieldStore},
 };
 use chrono::Utc;
-use tracing::{span::Attributes, Event, Id, Metadata, Subscriber};
-use tracing_subscriber::{
-    layer::Context,
-    registry::{LookupSpan, Scope},
-    Layer,
-};
+use tracing::{span::Attributes, Event, Id, Subscriber};
+use tracing_subscriber::{layer::Context, registry::LookupSpan, Layer};
 
 /// The layer responsible for formatting tracing events in a way datadog can parse them
 #[non_exhaustive]
@@ -34,79 +30,52 @@ impl Default for DatadogFormattingLayer<StdoutSink> {
 impl<S: Subscriber + for<'a> LookupSpan<'a>, Sink: EventSink + 'static> Layer<S>
     for DatadogFormattingLayer<Sink>
 {
-    fn on_new_span(&self, attrs: &Attributes<'_>, id: &Id, ctx: Context<'_, S>) {
+    fn on_new_span(&self, span_attrs: &Attributes<'_>, id: &Id, ctx: Context<'_, S>) {
         #[allow(clippy::expect_used)]
         let span = ctx.span(id).expect("Span not found, this is a bug");
 
         let mut extensions = span.extensions_mut();
 
-        let fields = fields::from_attributes(attrs);
+        let fields = fields::from_attributes(span_attrs);
 
         // insert fields from new span e.g #[instrument(fields(hello = "world"))]
-        if extensions.get_mut::<Fields>().is_none() {
-            extensions.insert(Fields { fields });
+        if extensions.get_mut::<FieldStore>().is_none() {
+            extensions.insert(FieldStore { fields });
         }
     }
 
     // IDEA: maybe a on record implementation is required here
 
     fn on_event(&self, event: &Event<'_>, ctx: Context<'_, S>) {
-        let mut all_fields = vec![];
+        let event_fields = fields::from_event(event);
 
-        // parse context
-        for span in ctx
-            .event_scope(event)
-            .into_iter()
-            .flat_map(Scope::from_root)
-        {
-            #[allow(clippy::expect_used)]
-            let fields_from_span = span
-                .extensions()
-                .get::<Fields>()
-                .expect("No Fields found in span extensions. This is a tracing bug.")
-                .clone();
-
-            all_fields.extend(fields_from_span.fields);
-        }
-
-        // parse event fields
-        let mut fields = fields::from_event(event);
-
-        // find message if present in fields
-        let message = fields
+        // find message if present in event fields
+        let mut message = event_fields
             .iter()
-            .find(|pair| pair.0 == "message")
-            .map(|pair| pair.1.clone())
+            .find(|pair| pair.name == "message")
+            .map(|pair| pair.value.clone())
             .unwrap_or_default();
 
-        // reason for extending fields with all_fields is the order of fields in the message
-        fields.extend(all_fields);
+        let all_fields: Vec<FieldPair> = Vec::default()
+            .into_iter()
+            .chain(fields::from_spans(&ctx, event))
+            .chain(event_fields)
+            .collect();
+
+        // serialize the event metadata and fields
+        for field in all_fields {
+            // message is just a regular field
+            if field.name != "message" {
+                message.push_str(&format!(
+                    " {}={}",
+                    field.name,
+                    field.value.trim_matches('\"')
+                ));
+            }
+        }
 
         // look for datadog trace- and span-id
         let datadog_ids = datadog_ids::read_from_context(&ctx);
-
-        // format and serialize the event metadata and fields
-        let formatted_event = Self::format_event(message, event.metadata(), &fields, datadog_ids);
-        let serialized_event = serde_json::to_string(&formatted_event)
-            .unwrap_or_else(|_| "Failed to serialize an event to json".to_string());
-
-        self.event_sink.write(serialized_event);
-    }
-}
-
-impl<Sink: EventSink + 'static> DatadogFormattingLayer<Sink> {
-    fn format_event(
-        mut message: String,
-        meta: &Metadata<'_>,
-        fields: &[FieldPair],
-        datadog_ids: Option<DatadogIds>,
-    ) -> DatadogFormattedEvent {
-        for (name, value) in fields {
-            // message is just a regular field
-            if name != "message" {
-                message.push_str(&format!(" {}={}", name, value.trim_matches('\"')));
-            }
-        }
 
         // FIXME: refactor this
         let ids = {
@@ -118,14 +87,19 @@ impl<Sink: EventSink + 'static> DatadogFormattingLayer<Sink> {
 
         // IDEA: maybe loggerName instead of target
         // IDEA: maybe use fields as attributes or something
-        DatadogFormattedEvent {
+        let formatted_event = DatadogFormattedEvent {
             timestamp: Utc::now().to_rfc3339(),
-            level: meta.level().to_string(),
+            level: event.metadata().level().to_string(),
             message,
-            target: meta.target().to_string(),
+            target: event.metadata().target().to_string(),
             datadog_span_id: ids.0,
             datadog_trace_id: ids.1,
-        }
+        };
+
+        let serialized_event = serde_json::to_string(&formatted_event)
+            .unwrap_or_else(|_| "Failed to serialize an event to json".to_string());
+
+        self.event_sink.write(serialized_event);
     }
 }
 
