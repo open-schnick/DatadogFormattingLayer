@@ -29,7 +29,7 @@ fn works_with_otel_stack() {
         .unwrap();
 
     tracing_subscriber::registry()
-        .with(DatadogFormattingLayer)
+        .with(DatadogFormattingLayer::default())
         .with(tracing_opentelemetry::layer().with_tracer(tracer))
         .init();
 
