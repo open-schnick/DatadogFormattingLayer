@@ -6,8 +6,9 @@ use tracing_subscriber::{
     registry::{LookupSpan, SpanRef},
 };
 
-#[derive(Debug, serde::Serialize)]
-pub struct DatadogId(u64);
+#[derive(serde::Serialize)]
+#[cfg_attr(test, derive(Debug, Clone, serde::Deserialize, PartialEq, Eq))]
+pub struct DatadogId(pub(crate) u64);
 
 pub struct DatadogIds {
     pub trace_id: DatadogId,
