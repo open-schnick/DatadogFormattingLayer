@@ -77,14 +77,6 @@ impl<S: Subscriber + for<'a> LookupSpan<'a>, Sink: EventSink + 'static> Layer<S>
         // look for datadog trace- and span-id
         let datadog_ids = datadog_ids::read_from_context(&ctx);
 
-        // FIXME: refactor this
-        let ids = {
-            match datadog_ids {
-                Some(ids) => (Some(ids.span_id), Some(ids.trace_id)),
-                None => (None, None),
-            }
-        };
-
         // IDEA: maybe loggerName instead of target
         // IDEA: maybe use fields as attributes or something
         let formatted_event = DatadogFormattedEvent {
@@ -92,8 +84,8 @@ impl<S: Subscriber + for<'a> LookupSpan<'a>, Sink: EventSink + 'static> Layer<S>
             level: event.metadata().level().to_string(),
             message,
             target: event.metadata().target().to_string(),
-            datadog_span_id: ids.0,
-            datadog_trace_id: ids.1,
+            datadog_trace_id: datadog_ids.0,
+            datadog_span_id: datadog_ids.1,
         };
 
         let mut serialized_event = serde_json::to_string(&formatted_event)
