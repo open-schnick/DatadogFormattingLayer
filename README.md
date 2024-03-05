@@ -2,7 +2,8 @@
 
 A crate providing a tracing-subscriber layer for formatting events so Datadog can parse them.
 
-![Build](https://github.com/open-schnick/DatadogFormattingLayer/actions/workflows/tests.yml/badge.svg)
+[![Release](https://github.com/open-schnick/DatadogFormattingLayer/actions/workflows/release.yml/badge.svg)](https://github.com/open-schnick/DatadogFormattingLayer/actions/workflows/release.yml)
+[![Test](https://github.com/open-schnick/DatadogFormattingLayer/actions/workflows/test.yml/badge.svg)](https://github.com/open-schnick/DatadogFormattingLayer/actions/workflows/test.yml)
 ![License](https://img.shields.io/crates/l/datadog-formatting-layer)
 ![Crates.io](https://img.shields.io/crates/v/datadog-formatting-layer)
 
@@ -28,7 +29,7 @@ use tracing::info;
 use tracing_subscriber::prelude::*;
 
 tracing_subscriber::registry()
-    .with(DatadogFormattingLayer)
+    .with(DatadogFormattingLayer::default())
     .init();
 
 info!(user = "Jack", "Hello World!");
@@ -78,7 +79,7 @@ let tracer = opentelemetry_datadog::new_pipeline()
 
 // Use both the tracer and the formatting layer
 tracing_subscriber::registry()
-    .with(DatadogFormattingLayer)
+    .with(DatadogFormattingLayer::default())
     .with(tracing_opentelemetry::layer().with_tracer(tracer))
     .init();
 
@@ -108,5 +109,6 @@ Otherwise the following output will be printed to stdout
 
 | Opentelemetry | DatadogFormattingLayer |
 | ------------- | ---------------------- |
+| 0.20.\*       | 2.0.\*                 |
 | 0.20.\*       | 1.1.\*                 |
 | 0.19.\*       | 1.0.\*                 |
