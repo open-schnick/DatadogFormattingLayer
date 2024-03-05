@@ -23,7 +23,7 @@ jobs:
         uses: dtolnay/rust-toolchain@master
         with:
           toolchain: ${{ matrix.toolchain }}
-        uses: taiki-e/install-action@cargo-tarpaulin
+      - uses: taiki-e/install-action@cargo-nextest
       - name: cargo nextest run --all
         run: cargo nextest run --all
       - name: cargo test --doc
