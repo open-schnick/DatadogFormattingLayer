@@ -50,14 +50,12 @@ Running this code will result in the following output on stdout:
 
 ```rust
 use datadog_formatting_layer::DatadogFormattingLayer;
-use opentelemetry::{
-    global,
-    sdk::{
-        propagation::TraceContextPropagator,
-        trace::{RandomIdGenerator, Sampler},
-    },
-};
+use opentelemetry::global;
 use opentelemetry_datadog::ApiVersion;
+use opentelemetry_sdk::{
+    propagation::TraceContextPropagator,
+    trace::{config, RandomIdGenerator, Sampler},
+};
 use tracing::{debug, error, info, instrument, warn};
 use tracing_subscriber::{prelude::*, util::SubscriberInitExt};
 
@@ -67,7 +65,7 @@ global::set_text_map_propagator(TraceContextPropagator::new());
 let tracer = opentelemetry_datadog::new_pipeline()
     .with_service_name("my-service")
     .with_trace_config(
-        opentelemetry::sdk::trace::config()
+        config()
             .with_sampler(Sampler::AlwaysOn)
             .with_id_generator(RandomIdGenerator::default()),
     )
@@ -109,6 +107,7 @@ Otherwise the following output will be printed to stdout
 
 | Opentelemetry | DatadogFormattingLayer |
 | ------------- | ---------------------- |
+| 0.22.\*       | 2.1.\*                 |
 | 0.20.\*       | 2.0.\*                 |
 | 0.20.\*       | 1.1.\*                 |
 | 0.19.\*       | 1.0.\*                 |

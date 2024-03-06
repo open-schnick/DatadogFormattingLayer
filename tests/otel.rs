@@ -1,12 +1,10 @@
 use datadog_formatting_layer::DatadogFormattingLayer;
-use opentelemetry::{
-    global,
-    sdk::{
-        propagation::TraceContextPropagator,
-        trace::{RandomIdGenerator, Sampler},
-    },
-};
+use opentelemetry::global;
 use opentelemetry_datadog::ApiVersion;
+use opentelemetry_sdk::{
+    propagation::TraceContextPropagator,
+    trace::{config, RandomIdGenerator, Sampler},
+};
 use tracing::{debug, error, info, instrument, warn};
 use tracing_subscriber::{prelude::*, util::SubscriberInitExt};
 
@@ -18,7 +16,7 @@ fn works_with_otel_stack() {
     let tracer = opentelemetry_datadog::new_pipeline()
         .with_service_name("my-service")
         .with_trace_config(
-            opentelemetry::sdk::trace::config()
+            config()
                 .with_sampler(Sampler::AlwaysOn)
                 .with_id_generator(RandomIdGenerator::default()),
         )
