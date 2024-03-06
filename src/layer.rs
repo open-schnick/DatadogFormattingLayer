@@ -341,14 +341,12 @@ mod otel {
 #[cfg(test)]
 mod setup {
     use super::*;
-    use opentelemetry::{
-        global,
-        sdk::{
-            propagation::TraceContextPropagator,
-            trace::{RandomIdGenerator, Sampler},
-        },
-    };
+    use opentelemetry::global;
     use opentelemetry_datadog::ApiVersion;
+    use opentelemetry_sdk::{
+        propagation::TraceContextPropagator,
+        trace::{config, RandomIdGenerator, Sampler},
+    };
     use smoothy::BasicAsserter;
     use std::sync::{Arc, Mutex};
     use tracing::{debug, instrument, subscriber::DefaultGuard, warn};
@@ -375,7 +373,7 @@ mod setup {
         let tracer = opentelemetry_datadog::new_pipeline()
             .with_service_name("my-service")
             .with_trace_config(
-                opentelemetry::sdk::trace::config()
+                config()
                     .with_sampler(Sampler::AlwaysOn)
                     .with_id_generator(RandomIdGenerator::default()),
             )
