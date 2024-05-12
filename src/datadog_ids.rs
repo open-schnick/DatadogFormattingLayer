@@ -4,16 +4,16 @@ use tracing_opentelemetry::OtelData;
 use tracing_subscriber::{layer::Context, registry::LookupSpan};
 
 #[derive(serde::Serialize)]
-#[cfg_attr(test, derive(Debug, Clone, serde::Deserialize, PartialEq, Eq))]
-pub struct DatadogId(pub(crate) u64);
+#[cfg_attr(test, derive(Debug, Clone, Copy, serde::Deserialize, PartialEq, Eq))]
+pub struct DatadogTraceId(pub(crate) u64);
 
 #[allow(clippy::fallible_impl_from)]
-impl From<TraceId> for DatadogId {
+impl From<TraceId> for DatadogTraceId {
     // TraceId are u128 -> 16 Bytes
     // but datadog needs u64 -> 8 Bytes
     // Therefore we just take the 8 most significant bytes
     // This is not ideal and may lead to duplicate trace correlations
-    // but whe cannot do anything against that anyways.
+    // but we cannot do anything against that anyways.
     fn from(value: TraceId) -> Self {
         let bytes = value.to_bytes();
         // this cannot fail
@@ -28,17 +28,21 @@ impl From<TraceId> for DatadogId {
     }
 }
 
-impl From<SpanId> for DatadogId {
+#[derive(serde::Serialize)]
+#[cfg_attr(test, derive(Debug, Clone, Copy, serde::Deserialize, PartialEq, Eq))]
+pub struct DatadogSpanId(pub u64);
+
+impl From<SpanId> for DatadogSpanId {
     fn from(value: SpanId) -> Self {
         Self(u64::from_be_bytes(value.to_bytes()))
     }
 }
 
-pub fn read_from_context<S>(ctx: &Context<'_, S>) -> (Option<DatadogId>, Option<DatadogId>)
+pub fn read_from_context<S>(ctx: &Context<'_, S>) -> (Option<DatadogTraceId>, Option<DatadogSpanId>)
 where
     S: Subscriber + for<'a> LookupSpan<'a>,
 {
-    let ids: Option<(DatadogId, DatadogId)> = ctx.lookup_current().and_then(|span_ref| {
+    let ids: Option<(DatadogTraceId, DatadogSpanId)> = ctx.lookup_current().and_then(|span_ref| {
         span_ref.extensions().get::<OtelData>().map(|o| {
             (
                 o.parent_cx.span().span_context().trace_id().into(),
@@ -47,8 +51,5 @@ where
         })
     });
 
-    match ids {
-        Some(ids) => (Some(ids.0), Some(ids.1)),
-        None => (None, None),
-    }
+    ids.map_or((None, None), |ids| (Some(ids.0), Some(ids.1)))
 }
