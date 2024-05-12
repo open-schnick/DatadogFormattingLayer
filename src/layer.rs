@@ -1,5 +1,5 @@
 use crate::{
-    datadog_ids::{self, DatadogId},
+    datadog_ids::{self, DatadogSpanId, DatadogTraceId},
     event_sink::{EventSink, StdoutSink},
     fields::{self, FieldPair, FieldStore},
 };
@@ -105,9 +105,9 @@ struct DatadogFormattedEvent {
     message: String,
     target: String,
     #[serde(skip_serializing_if = "Option::is_none", rename = "dd.trace_id")]
-    datadog_trace_id: Option<DatadogId>,
+    datadog_trace_id: Option<DatadogTraceId>,
     #[serde(skip_serializing_if = "Option::is_none", rename = "dd.span_id")]
-    datadog_span_id: Option<DatadogId>,
+    datadog_span_id: Option<DatadogSpanId>,
 }
 
 #[cfg(test)]
@@ -129,8 +129,8 @@ mod simple {
         assert_that(events[0].level.clone()).equals("INFO");
         assert_that(events[0].message.clone()).equals("Hello World!");
         assert_that(events[0].target.clone()).equals("datadog_formatting_layer::layer::simple");
-        assert_that(events[0].datadog_span_id.clone()).is_none();
-        assert_that(events[0].datadog_trace_id.clone()).is_none();
+        assert_that(events[0].datadog_span_id).is_none();
+        assert_that(events[0].datadog_trace_id).is_none();
     }
 
     #[test]
@@ -228,8 +228,8 @@ mod otel {
         assert_that(events[0].level.clone()).equals("INFO");
         assert_that(events[0].message.clone()).equals("Hello World!");
         assert_that(events[0].target.clone()).equals("datadog_formatting_layer::layer::otel");
-        assert_that(events[0].datadog_span_id.clone()).is_none();
-        assert_that(events[0].datadog_trace_id.clone()).is_none();
+        assert_that(events[0].datadog_span_id).is_none();
+        assert_that(events[0].datadog_trace_id).is_none();
     }
 
     #[test]
@@ -316,22 +316,22 @@ mod otel {
         let events = sink.events();
         assert_that(&events).size().is(3);
 
-        let first_span_id = events[0].datadog_span_id.clone().unwrap();
-        let first_trace_id = events[0].datadog_trace_id.clone().unwrap();
-        let second_span_id = events[1].datadog_span_id.clone().unwrap();
-        let second_trace_id = events[1].datadog_trace_id.clone().unwrap();
-        let third_span_id = events[2].datadog_span_id.clone().unwrap();
-        let third_trace_id = events[2].datadog_trace_id.clone().unwrap();
+        let first_span_id = events[0].datadog_span_id.unwrap();
+        let first_trace_id = events[0].datadog_trace_id.unwrap();
+        let second_span_id = events[1].datadog_span_id.unwrap();
+        let second_trace_id = events[1].datadog_trace_id.unwrap();
+        let third_span_id = events[2].datadog_span_id.unwrap();
+        let third_trace_id = events[2].datadog_trace_id.unwrap();
 
-        assert_that(first_span_id.clone()).is_valid_datadog_id();
+        assert_that(first_span_id).is_any_valid_id();
         // first event does not have a trace id
-        assert_that(first_trace_id.0).is(0);
+        assert_that(first_trace_id).is_not_a_valid_id();
 
-        assert_that(second_span_id.clone()).is_valid_datadog_id();
+        assert_that(second_span_id).is_any_valid_id();
         assert_that(second_span_id.0).is_not(first_span_id.0);
-        assert_that(second_trace_id.clone()).is_valid_datadog_id();
+        assert_that(second_trace_id).is_any_valid_id();
 
-        assert_that(third_span_id.clone()).is_valid_datadog_id();
+        assert_that(third_span_id).is_any_valid_id();
         assert_that(third_span_id.0).is_not(first_span_id.0);
         assert_that(third_span_id.0).is(second_span_id.0);
         assert_that(third_trace_id.0).is(second_trace_id.0);
@@ -427,12 +427,28 @@ mod setup {
 
     pub trait SmoothyExt {
         #[allow(clippy::wrong_self_convention)]
-        fn is_valid_datadog_id(self);
+        fn is_any_valid_id(self);
+        #[allow(clippy::wrong_self_convention)]
+        fn is_not_a_valid_id(self);
     }
 
-    impl SmoothyExt for BasicAsserter<DatadogId> {
-        fn is_valid_datadog_id(self) {
-            self.is_not(DatadogId(0));
+    impl SmoothyExt for BasicAsserter<DatadogTraceId> {
+        fn is_any_valid_id(self) {
+            self.is_not(DatadogTraceId(0));
+        }
+
+        fn is_not_a_valid_id(self) {
+            self.is(DatadogTraceId(0));
+        }
+    }
+
+    impl SmoothyExt for BasicAsserter<DatadogSpanId> {
+        fn is_any_valid_id(self) {
+            self.is_not(DatadogSpanId(0));
+        }
+
+        fn is_not_a_valid_id(self) {
+            self.is(DatadogSpanId(0));
         }
     }
 }
