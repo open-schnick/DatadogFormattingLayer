@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::{cmp::Ordering, collections::HashMap};
 use tracing::{field::Visit, span::Attributes, Event, Subscriber};
 use tracing_subscriber::{
     layer::Context,
@@ -10,10 +10,22 @@ pub struct FieldStore {
     pub fields: Vec<FieldPair>,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct FieldPair {
     pub name: String,
     pub value: String,
+}
+
+impl PartialOrd for FieldPair {
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+        Some(self.name.cmp(&other.name))
+    }
+}
+
+impl Ord for FieldPair {
+    fn cmp(&self, other: &Self) -> Ordering {
+        self.name.cmp(&other.name)
+    }
 }
 
 pub fn from_attributes(attrs: &Attributes<'_>) -> Vec<FieldPair> {
