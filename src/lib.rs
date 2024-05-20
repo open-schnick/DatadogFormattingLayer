@@ -45,6 +45,7 @@
 mod datadog_ids;
 mod event_sink;
 mod fields;
+mod formatting;
 mod layer;
 
 // reexport

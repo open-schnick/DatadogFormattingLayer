@@ -12,7 +12,10 @@ pub trait EventSink {
 pub struct StdoutSink;
 
 impl EventSink for StdoutSink {
-    fn write(&self, event: String) {
+    fn write(&self, mut event: String) {
+        // each line stdout is interpreted as a new log
+        event.push('\n');
+
         #[allow(clippy::unwrap_used)]
         stdout().write_all(event.as_bytes()).unwrap();
     }

@@ -1,7 +1,8 @@
 use crate::{
-    datadog_ids::{self, DatadogSpanId, DatadogTraceId},
+    datadog_ids,
     event_sink::{EventSink, StdoutSink},
     fields::{self, FieldPair, FieldStore},
+    formatting::DatadogLog,
 };
 use chrono::Utc;
 use tracing::{span::Attributes, Event, Id, Subscriber};
@@ -50,7 +51,7 @@ impl<S: Subscriber + for<'a> LookupSpan<'a>, Sink: EventSink + 'static> Layer<S>
         let event_fields = fields::from_event(event);
 
         // find message if present in event fields
-        let mut message = event_fields
+        let message = event_fields
             .iter()
             .find(|pair| pair.name == "message")
             .map(|pair| pair.value.clone())
@@ -62,62 +63,35 @@ impl<S: Subscriber + for<'a> LookupSpan<'a>, Sink: EventSink + 'static> Layer<S>
             .chain(event_fields)
             .collect();
 
-        // serialize the event metadata and fields
-        for field in all_fields {
-            // message is just a regular field
-            if field.name != "message" {
-                message.push_str(&format!(
-                    " {}={}",
-                    field.name,
-                    field.value.trim_matches('\"')
-                ));
-            }
-        }
-
         // look for datadog trace- and span-id
         let datadog_ids = datadog_ids::read_from_context(&ctx);
 
         // IDEA: maybe loggerName instead of target
-        // IDEA: maybe use fields as attributes or something
-        let formatted_event = DatadogFormattedEvent {
-            timestamp: Utc::now().to_rfc3339(),
-            level: event.metadata().level().to_string(),
+        let log = DatadogLog {
+            timestamp: Utc::now(),
+            level: event.metadata().level().to_owned(),
             message,
+            fields: all_fields,
             target: event.metadata().target().to_string(),
-            datadog_trace_id: datadog_ids.0,
-            datadog_span_id: datadog_ids.1,
+            datadog_ids,
         };
 
-        let mut serialized_event = serde_json::to_string(&formatted_event)
-            .unwrap_or_else(|_| "Failed to serialize an event to json".to_string());
-
-        serialized_event.push('\n');
+        let serialized_event = log.format();
 
         self.event_sink.write(serialized_event);
     }
 }
 
-#[derive(serde::Serialize)]
-#[cfg_attr(test, derive(Debug, serde::Deserialize))]
-struct DatadogFormattedEvent {
-    timestamp: String,
-    level: String,
-    message: String,
-    target: String,
-    #[serde(skip_serializing_if = "Option::is_none", rename = "dd.trace_id")]
-    datadog_trace_id: Option<DatadogTraceId>,
-    #[serde(skip_serializing_if = "Option::is_none", rename = "dd.span_id")]
-    datadog_span_id: Option<DatadogSpanId>,
-}
-
 #[cfg(test)]
-mod simple {
-    use super::setup::{first_span, setup_simple_subscriber};
+mod simple_layer {
+    use self::setup::first_span;
+    use super::*;
+    use simple_layer::setup::setup_simple_subscriber;
     use smoothy::assert_that;
-    use tracing::{debug, error, info, trace, warn};
+    use tracing::info;
 
     #[test]
-    fn single_event() {
+    fn simple_log() {
         let (sink, _guard) = setup_simple_subscriber();
 
         info!("Hello World!");
@@ -125,66 +99,24 @@ mod simple {
         let events = sink.events();
         assert_that(&events).size().is(1);
 
-        assert_that(events[0].timestamp.is_empty()).is(false);
-        assert_that(events[0].level.clone()).equals("INFO");
-        assert_that(events[0].message.clone()).equals("Hello World!");
-        assert_that(events[0].target.clone()).equals("datadog_formatting_layer::layer::simple");
-        assert_that(events[0].datadog_span_id).is_none();
-        assert_that(events[0].datadog_trace_id).is_none();
+        assert_that(events).first().contains("\",\"level\":\"INFO\",\"message\":\"Hello World!\",\"target\":\"datadog_formatting_layer::layer::simple_layer\"}");
     }
 
     #[test]
-    fn events_with_different_level() {
+    fn log_with_fields() {
         let (sink, _guard) = setup_simple_subscriber();
 
-        trace!("Trace");
-        debug!("Debug");
-        info!("Info");
-        warn!("Warn");
-        error!("Error");
-
-        let events = sink.events();
-        assert_that(&events).size().is(5);
-
-        assert_that(events[0].level.clone()).equals("TRACE");
-        assert_that(events[1].level.clone()).equals("DEBUG");
-        assert_that(events[2].level.clone()).equals("INFO");
-        assert_that(events[3].level.clone()).equals("WARN");
-        assert_that(events[4].level.clone()).equals("ERROR");
-    }
-
-    #[test]
-    fn event_with_single_field() {
-        let (sink, _guard) = setup_simple_subscriber();
-
-        info!(user = "Kevin", "Hello World!");
+        info!(user = "John Doe", "Hello World!");
 
         let events = sink.events();
         assert_that(&events).size().is(1);
 
-        assert_that(events[0].message.clone()).equals("Hello World! user=Kevin");
+        assert_that(events).first().contains("\",\"level\":\"INFO\",\"message\":\"Hello World! user=John Doe\",\"target\":\"datadog_formatting_layer::layer::simple_layer\"}");
     }
 
+    #[allow(clippy::redundant_clone)]
     #[test]
-    fn event_with_multiple_fields() {
-        let (sink, _guard) = setup_simple_subscriber();
-
-        info!(yaks = 42, yaks_shaved = true, "Shaving");
-
-        let events = sink.events();
-        assert_that(&events).size().is(1);
-
-        // Order of fields is not guaranteed
-        assert_that(events[0].message.clone())
-            .contains("Shaving")
-            .and()
-            .contains("yaks=42")
-            .and()
-            .contains("yaks_shaved=true");
-    }
-
-    #[test]
-    fn spans_with_fields() {
+    fn complex_logs() {
         let (sink, _guard) = setup_simple_subscriber();
 
         first_span("Argument");
@@ -192,98 +124,35 @@ mod simple {
         let events = sink.events();
         assert_that(&events).size().is(3);
 
-        // Order of fields is not guaranteed
-        assert_that(events[0].message.clone()).equals("First Span! first_value=Argument");
-        assert_that(events[1].message.clone())
-            .contains("Second Span!")
-            .and()
-            .contains("first_value=Argument")
-            .and()
-            .contains("attr=value");
-        assert_that(events[2].message.clone())
-            .contains("return=Return Value")
-            .and()
-            .contains("first_value=Argument")
-            .and()
-            .contains("attr=value");
+        assert_that(events.clone()).first().contains("\",\"level\":\"DEBUG\",\"message\":\"First Span! first_value=Argument\",\"target\":\"datadog_formatting_layer::layer::setup\"}");
+        assert_that(events.clone()).second().contains("\",\"level\":\"DEBUG\",\"message\":\"Second Span! attr=value first_value=Argument\",\"target\":\"datadog_formatting_layer::layer::setup\"}");
+        assert_that(events.clone()).third().contains("\",\"level\":\"INFO\",\"message\":\" attr=value first_value=Argument return=Return Value\",\"target\":\"datadog_formatting_layer::layer::setup\"}");
     }
 }
 
 #[cfg(test)]
-mod otel {
-    use super::setup::{first_span, setup_otel_subscriber, SmoothyExt};
+mod layer_with_otel {
+    use self::setup::{first_span, setup_otel_subscriber};
+    use super::*;
+    use crate::layer::setup::{LogMessageExt, SmoothyExt};
     use smoothy::assert_that;
-    use tracing::{debug, error, info, trace, warn};
+    use tracing::info;
 
     #[test]
-    fn single_event() {
+    fn without_spans_has_no_datadog_ids() {
         let (sink, _guard) = setup_otel_subscriber();
 
         info!("Hello World!");
 
         let events = sink.events();
-        assert_that(&events).size().is(1);
 
-        assert_that(events[0].timestamp.is_empty()).is(false);
-        assert_that(events[0].level.clone()).equals("INFO");
-        assert_that(events[0].message.clone()).equals("Hello World!");
-        assert_that(events[0].target.clone()).equals("datadog_formatting_layer::layer::otel");
-        assert_that(events[0].datadog_span_id).is_none();
-        assert_that(events[0].datadog_trace_id).is_none();
+        assert_that(events.clone()).size().is(1);
+        assert_that(events[0].trace_id()).is_none();
+        assert_that(events[0].span_id()).is_none();
     }
 
     #[test]
-    fn events_with_different_level() {
-        let (sink, _guard) = setup_otel_subscriber();
-
-        trace!("Trace");
-        debug!("Debug");
-        info!("Info");
-        warn!("Warn");
-        error!("Error");
-
-        let events = sink.events();
-        assert_that(&events).size().is(5);
-
-        assert_that(events[0].level.clone()).equals("TRACE");
-        assert_that(events[1].level.clone()).equals("DEBUG");
-        assert_that(events[2].level.clone()).equals("INFO");
-        assert_that(events[3].level.clone()).equals("WARN");
-        assert_that(events[4].level.clone()).equals("ERROR");
-    }
-
-    #[test]
-    fn event_with_single_field() {
-        let (sink, _guard) = setup_otel_subscriber();
-
-        info!(user = "Kevin", "Hello World!");
-
-        let events = sink.events();
-        assert_that(&events).size().is(1);
-
-        assert_that(events[0].message.clone()).equals("Hello World! user=Kevin");
-    }
-
-    #[test]
-    fn event_with_multiple_fields() {
-        let (sink, _guard) = setup_otel_subscriber();
-
-        info!(yaks = 42, yaks_shaved = true, "Shaving");
-
-        let events = sink.events();
-        assert_that(&events).size().is(1);
-
-        // Order of fields is not guaranteed
-        assert_that(events[0].message.clone())
-            .contains("Shaving")
-            .and()
-            .contains("yaks=42")
-            .and()
-            .contains("yaks_shaved=true");
-    }
-
-    #[test]
-    fn spans_with_fields() {
+    fn with_spans_has_correct_datadog_ids() {
         let (sink, _guard) = setup_otel_subscriber();
 
         first_span("Argument");
@@ -291,50 +160,18 @@ mod otel {
         let events = sink.events();
         assert_that(&events).size().is(3);
 
-        // Order of fields is not guaranteed
-        assert_that(events[0].message.clone()).equals("First Span! first_value=Argument");
-        assert_that(events[1].message.clone())
-            .contains("Second Span!")
-            .and()
-            .contains("first_value=Argument")
-            .and()
-            .contains("attr=value");
-        assert_that(events[2].message.clone())
-            .contains("return=Return Value")
-            .and()
-            .contains("first_value=Argument")
-            .and()
-            .contains("attr=value");
-    }
-
-    #[test]
-    fn events_within_spans_contain_trace_and_span_id() {
-        let (sink, _guard) = setup_otel_subscriber();
-
-        first_span("Argument");
-
-        let events = sink.events();
-        assert_that(&events).size().is(3);
-
-        let first_span_id = events[0].datadog_span_id.unwrap();
-        let first_trace_id = events[0].datadog_trace_id.unwrap();
-        let second_span_id = events[1].datadog_span_id.unwrap();
-        let second_trace_id = events[1].datadog_trace_id.unwrap();
-        let third_span_id = events[2].datadog_span_id.unwrap();
-        let third_trace_id = events[2].datadog_trace_id.unwrap();
-
-        assert_that(first_span_id).is_any_valid_id();
-        // first event does not have a trace id
-        assert_that(first_trace_id).is_not_a_valid_id();
-
-        assert_that(second_span_id).is_any_valid_id();
-        assert_that(second_span_id.0).is_not(first_span_id.0);
-        assert_that(second_trace_id).is_any_valid_id();
-
-        assert_that(third_span_id).is_any_valid_id();
-        assert_that(third_span_id.0).is_not(first_span_id.0);
-        assert_that(third_span_id.0).is(second_span_id.0);
-        assert_that(third_trace_id.0).is(second_trace_id.0);
+        // First message has no trace id but a span id
+        assert_that(events[0].trace_id()).is_not_valid();
+        assert_that(events[0].span_id()).is_valid();
+        // second message has trace id and different span id
+        assert_that(events[1].trace_id()).is_valid();
+        assert_that(events[1].span_id()).is_valid();
+        assert_that(events[1].span_id()).is_not(events[0].span_id());
+        // third message has same trace id as the second and different span id
+        assert_that(events[2].trace_id()).is_valid();
+        assert_that(events[2].trace_id()).is(events[1].trace_id());
+        assert_that(events[2].span_id()).is_valid();
+        assert_that(events[2].span_id()).is(events[1].span_id());
     }
 }
 
@@ -349,7 +186,7 @@ mod setup {
     };
     use smoothy::BasicAsserter;
     use std::sync::{Arc, Mutex};
-    use tracing::{debug, instrument, subscriber::DefaultGuard, warn};
+    use tracing::{debug, instrument, subscriber::DefaultGuard};
     use tracing_subscriber::prelude::*;
 
     pub fn setup_simple_subscriber() -> (ObservableSink, DefaultGuard) {
@@ -384,12 +221,54 @@ mod setup {
             .unwrap();
 
         let subscriber = tracing_subscriber::registry()
+            .with(tracing_subscriber::fmt::layer())
             .with(DatadogFormattingLayer::with_sink(sink.clone()))
             .with(tracing_opentelemetry::layer().with_tracer(tracer));
 
         let guard = tracing::subscriber::set_default(subscriber);
 
         (sink, guard)
+    }
+
+    pub trait LogMessageExt {
+        fn span_id(&self) -> Option<u64>;
+        fn trace_id(&self) -> Option<u64>;
+    }
+
+    impl LogMessageExt for String {
+        fn span_id(&self) -> Option<u64> {
+            let split: Vec<&str> = self.split("dd.span_id\":").collect();
+
+            split
+                .get(1)
+                .map(|split| split.replace('}', "").parse::<u64>().unwrap())
+        }
+
+        fn trace_id(&self) -> Option<u64> {
+            let split: Vec<&str> = self.split("dd.trace_id\":").collect();
+
+            split.get(1).and_then(|split| {
+                let split: Vec<&str> = split.split(",\"").collect();
+                split.first().map(|split| split.parse::<u64>().unwrap())
+            })
+        }
+    }
+
+    pub trait SmoothyExt {
+        #[allow(clippy::wrong_self_convention)]
+        fn is_valid(self);
+        #[allow(clippy::wrong_self_convention)]
+        fn is_not_valid(self);
+    }
+
+    impl SmoothyExt for BasicAsserter<Option<u64>> {
+        fn is_valid(self) {
+            self.is_some().and_value().is_not(0);
+        }
+
+        fn is_not_valid(self) {
+            self.is_some().and_value().is(0);
+        }
     }
 
     #[derive(Debug, Clone, Default)]
@@ -404,12 +283,8 @@ mod setup {
     }
 
     impl ObservableSink {
-        pub fn events(&self) -> Vec<DatadogFormattedEvent> {
-            let serialized_events = self.events.lock().unwrap().clone();
-            serialized_events
-                .into_iter()
-                .map(|serialized_event| serde_json::from_str(&serialized_event).unwrap())
-                .collect()
+        pub fn events(&self) -> Vec<String> {
+            self.events.lock().unwrap().clone()
         }
     }
 
@@ -420,35 +295,8 @@ mod setup {
     }
 
     #[instrument(fields(attr = "value"), ret)]
-    pub fn second_span() -> String {
+    fn second_span() -> String {
         debug!("Second Span!");
         String::from("Return Value")
-    }
-
-    pub trait SmoothyExt {
-        #[allow(clippy::wrong_self_convention)]
-        fn is_any_valid_id(self);
-        #[allow(clippy::wrong_self_convention)]
-        fn is_not_a_valid_id(self);
-    }
-
-    impl SmoothyExt for BasicAsserter<DatadogTraceId> {
-        fn is_any_valid_id(self) {
-            self.is_not(DatadogTraceId(0));
-        }
-
-        fn is_not_a_valid_id(self) {
-            self.is(DatadogTraceId(0));
-        }
-    }
-
-    impl SmoothyExt for BasicAsserter<DatadogSpanId> {
-        fn is_any_valid_id(self) {
-            self.is_not(DatadogSpanId(0));
-        }
-
-        fn is_not_a_valid_id(self) {
-            self.is(DatadogSpanId(0));
-        }
     }
 }
