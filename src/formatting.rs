@@ -14,7 +14,7 @@ pub struct DatadogLog {
     pub message: String,
     pub fields: Vec<FieldPair>,
     pub target: String,
-    pub datadog_ids: (Option<DatadogTraceId>, Option<DatadogSpanId>),
+    pub datadog_ids: Option<(DatadogTraceId, DatadogSpanId)>,
 }
 
 impl DatadogLog {
@@ -42,10 +42,8 @@ impl DatadogLog {
         log.insert("message".to_string(), message.into());
         log.insert("target".to_string(), self.target.into());
 
-        if let Some(trace_id) = self.datadog_ids.0 {
+        if let Some((trace_id, span_id)) = self.datadog_ids {
             log.insert("dd.trace_id".to_string(), trace_id.0.into());
-        }
-        if let Some(span_id) = self.datadog_ids.1 {
             log.insert("dd.span_id".to_string(), span_id.0.into());
         }
 
@@ -71,7 +69,7 @@ mod format {
             message: "Hello World!".to_string(),
             fields: vec![],
             target: "target".to_string(),
-            datadog_ids: (None, None),
+            datadog_ids: None,
         };
 
         assert_that(trace.clone().format()).contains("\"level\":\"TRACE\"");
@@ -109,7 +107,7 @@ mod format {
             message: "Hello World!".to_string(),
             fields: vec![],
             target: "target".to_string(),
-            datadog_ids: (None, None),
+            datadog_ids: None,
         };
 
         assert_that(sut.format()).is(json!({"timestamp": "2022-01-01T00:00:00+00:00", "level": "INFO", "message": "Hello World!", "target": "target"}).to_string());
@@ -123,7 +121,7 @@ mod format {
             message: "Hello World!".to_string(),
             fields: vec![],
             target: "target".to_string(),
-            datadog_ids: (Some(DatadogTraceId(1)), Some(DatadogSpanId(2))),
+            datadog_ids: Some((DatadogTraceId(1), DatadogSpanId(2))),
         };
 
         assert_that(sut.format()).is(json!({"timestamp": "2022-01-01T00:00:00+00:00", "level": "INFO", "message": "Hello World!", "target": "target", "dd.trace_id": 1, "dd.span_id": 2}).to_string());
@@ -142,7 +140,7 @@ mod format {
             message: "Hello World!".to_string(),
             fields,
             target: "target".to_string(),
-            datadog_ids: (None, None),
+            datadog_ids: None,
         };
 
         assert_that(sut.format()).is(json!({"timestamp": "2022-01-01T00:00:00+00:00", "level": "INFO", "message": "Hello World! foo=bar", "target": "target"}).to_string());
@@ -171,7 +169,7 @@ mod format {
             message: "Hello World!".to_string(),
             fields,
             target: "target".to_string(),
-            datadog_ids: (None, None),
+            datadog_ids: None,
         };
 
         assert_that(sut.format()).is(json!({"timestamp": "2022-01-01T00:00:00+00:00", "level": "INFO", "message": "Hello World! a=c b=b c=a", "target": "target"}).to_string());

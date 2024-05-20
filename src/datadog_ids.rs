@@ -38,18 +38,16 @@ impl From<SpanId> for DatadogSpanId {
     }
 }
 
-pub fn read_from_context<S>(ctx: &Context<'_, S>) -> (Option<DatadogTraceId>, Option<DatadogSpanId>)
+pub fn read_from_context<S>(ctx: &Context<'_, S>) -> Option<(DatadogTraceId, DatadogSpanId)>
 where
     S: Subscriber + for<'a> LookupSpan<'a>,
 {
-    let ids: Option<(DatadogTraceId, DatadogSpanId)> = ctx.lookup_current().and_then(|span_ref| {
+    ctx.lookup_current().and_then(|span_ref| {
         span_ref.extensions().get::<OtelData>().map(|o| {
             (
                 o.parent_cx.span().span_context().trace_id().into(),
                 o.builder.span_id.unwrap_or(SpanId::INVALID).into(),
             )
         })
-    });
-
-    ids.map_or((None, None), |ids| (Some(ids.0), Some(ids.1)))
+    })
 }
