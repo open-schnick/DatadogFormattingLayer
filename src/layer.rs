@@ -66,7 +66,6 @@ impl<S: Subscriber + for<'a> LookupSpan<'a>, Sink: EventSink + 'static> Layer<S>
         // look for datadog trace- and span-id
         let datadog_ids = datadog_ids::read_from_context(&ctx);
 
-        // IDEA: maybe loggerName instead of target
         let log = DatadogLog {
             timestamp: Utc::now(),
             level: event.metadata().level().to_owned(),

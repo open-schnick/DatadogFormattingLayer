@@ -40,6 +40,7 @@ impl DatadogLog {
         }
 
         log.insert("message".to_string(), message.into());
+        // IDEA: maybe loggerName instead of target
         log.insert("target".to_string(), self.target.into());
 
         if let Some((trace_id, span_id)) = self.datadog_ids {
