@@ -24,18 +24,17 @@ impl DatadogLog {
         log.insert("timestamp".to_string(), self.timestamp.to_rfc3339().into());
         log.insert("level".to_string(), self.level.to_string().into());
 
-        let mut message = self.message;
-
         self.fields.sort();
 
-        for field in self.fields {
+        let mut message = self.message;
+
+        for field in &self.fields {
             // message is just a regular field
             if field.name != "message" {
-                message.push_str(&format!(
-                    " {}={}",
-                    field.name,
-                    field.value.trim_matches('\"')
-                ));
+                let value = field.value.trim_matches('\"');
+
+                message.push_str(&format!(" {}={}", field.name, value));
+                log.insert(format!("fields.{}", &field.name), value.into());
             }
         }
 
@@ -144,7 +143,7 @@ mod format {
             datadog_ids: None,
         };
 
-        assert_that(sut.format()).is(json!({"timestamp": "2022-01-01T00:00:00+00:00", "level": "INFO", "message": "Hello World! foo=bar", "target": "target"}).to_string());
+        assert_that(sut.format()).is(json!({"timestamp": "2022-01-01T00:00:00+00:00", "level": "INFO", "fields.foo": "bar", "message": "Hello World! foo=bar", "target": "target"}).to_string());
     }
 
     #[test]
@@ -173,7 +172,7 @@ mod format {
             datadog_ids: None,
         };
 
-        assert_that(sut.format()).is(json!({"timestamp": "2022-01-01T00:00:00+00:00", "level": "INFO", "message": "Hello World! a=c b=b c=a", "target": "target"}).to_string());
+        assert_that(sut.format()).is(json!({"timestamp": "2022-01-01T00:00:00+00:00", "level": "INFO", "fields.a": "c", "fields.b": "b", "fields.c": "a", "message": "Hello World! a=c b=b c=a", "target": "target"}).to_string());
     }
 
     #[macro_export]
