@@ -183,6 +183,7 @@ mod setup {
         propagation::TraceContextPropagator,
         trace::{config, RandomIdGenerator, Sampler},
     };
+    use serde_json::Value;
     use smoothy::BasicAsserter;
     use std::sync::{Arc, Mutex};
     use tracing::{debug, instrument, subscriber::DefaultGuard};
@@ -191,9 +192,8 @@ mod setup {
     pub fn setup_simple_subscriber() -> (ObservableSink, DefaultGuard) {
         let sink = ObservableSink::default();
 
-        let subscriber = tracing_subscriber::registry()
-            .with(DatadogFormattingLayer::with_sink(sink.clone()))
-            .with(tracing_subscriber::fmt::layer());
+        let subscriber =
+            tracing_subscriber::registry().with(DatadogFormattingLayer::with_sink(sink.clone()));
 
         let guard = tracing::subscriber::set_default(subscriber);
 
@@ -220,7 +220,6 @@ mod setup {
             .unwrap();
 
         let subscriber = tracing_subscriber::registry()
-            .with(tracing_subscriber::fmt::layer())
             .with(DatadogFormattingLayer::with_sink(sink.clone()))
             .with(tracing_opentelemetry::layer().with_tracer(tracer));
 
@@ -236,20 +235,15 @@ mod setup {
 
     impl LogMessageExt for String {
         fn span_id(&self) -> Option<u64> {
-            let split: Vec<&str> = self.split("dd.span_id\":").collect();
-
-            split
-                .get(1)
-                .map(|split| split.replace('}', "").parse::<u64>().unwrap())
+            let log: Value = serde_json::from_str(self).unwrap();
+            log.get("dd.span_id")
+                .map(|span_id| span_id.as_u64().unwrap())
         }
 
         fn trace_id(&self) -> Option<u64> {
-            let split: Vec<&str> = self.split("dd.trace_id\":").collect();
-
-            split.get(1).and_then(|split| {
-                let split: Vec<&str> = split.split(",\"").collect();
-                split.first().map(|split| split.parse::<u64>().unwrap())
-            })
+            let log: Value = serde_json::from_str(self).unwrap();
+            log.get("dd.trace_id")
+                .map(|span_id| span_id.as_u64().unwrap())
         }
     }
 
@@ -276,7 +270,9 @@ mod setup {
     }
 
     impl EventSink for ObservableSink {
+        #[allow(clippy::print_stdout)]
         fn write(&self, event: String) {
+            println!("{event}");
             self.events.lock().unwrap().push(event);
         }
     }
