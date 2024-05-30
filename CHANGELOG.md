@@ -6,6 +6,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.2.0](https://github.com/open-schnick/DatadogFormattingLayer/compare/v2.1.0...v2.2.0) - 2024-05-30
+
+### Added
+- include fields into nested json object in logs
+- use preserve_order serde_json feature flag
+
+### Other
+- *(tests)* improve extracting of datadog ids from logs and print logs in test sink
+- move IDEA
+- simplify parsing and handling of DatadogIds
+- extract formatting of log messages and improve tests
+- update smoothy
+- add ord and eq to FieldPair
+- DatadogId to Trace and SpanId for better typing
+
 ## [2.1.0](https://github.com/open-schnick/DatadogFormattingLayer/compare/v2.0.0...v2.1.0) - 2024-03-06
 
 ### Added
