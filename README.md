@@ -41,6 +41,7 @@ Running this code will result in the following output on stdout:
 {
   "timestamp": "2023-06-21T10:36:50.364874878+00:00",
   "level": "INFO",
+  "fields.user": "Jack",
   "message": "Hello World user=Jack",
   "target": "simple"
 }
@@ -96,7 +97,7 @@ fn some_test(value: &str) {
 When running this code with an datadog agent installed the logs will be sent to datadog
 and parsed there.
 
-Otherwise the following output will be printed to stdout
+Otherwise the following output will be printed to stdout (fields are excluded for readability)
 
 ```json
 {"timestamp":"2023-06-21T10:36:50.363224217+00:00","level":"INFO","message":"Hello World! user=Jack","target":"otel"}
@@ -107,7 +108,7 @@ Otherwise the following output will be printed to stdout
 
 | Opentelemetry | DatadogFormattingLayer |
 | ------------- | ---------------------- |
-| 0.22.\*       | 2.1.\*                 |
+| 0.22.\*       | 2.1.\*, 2.2.\*         |
 | 0.20.\*       | 2.0.\*                 |
 | 0.20.\*       | 1.1.\*                 |
 | 0.19.\*       | 1.0.\*                 |
