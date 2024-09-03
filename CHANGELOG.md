@@ -6,6 +6,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [3.0.0](https://github.com/open-schnick/DatadogFormattingLayer/compare/v2.2.1...v3.0.0) - 2024-09-03
+
+### Added
+- [**breaking**] bump opentelemetry to 0.23.0
+
+### Other
+- adapt README to reflect new version
+- bump smoothy
+- remove redundant version specifiers from dependencies
+- update and fix ci to use cargo test
+- migrate clippy lints into Cargo.toml
+
 ## [2.2.1](https://github.com/open-schnick/DatadogFormattingLayer/compare/v2.2.0...v2.2.1) - 2024-05-30
 
 ### Other
