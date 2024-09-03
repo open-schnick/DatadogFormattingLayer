@@ -38,13 +38,13 @@ fn works_with_otel_stack() {
 #[instrument(fields(hello = "world"))]
 fn some_test(value: &str) {
     info!(ola = "salve", value, "Bla {value}");
-    some_test1()
+    some_test1();
 }
 
 #[instrument(fields(world = "world"))]
 fn some_test1() {
     debug!(ola = "salve", "Hello");
-    some_test2()
+    some_test2();
 }
 
 #[instrument()]

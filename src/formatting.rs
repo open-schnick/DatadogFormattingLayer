@@ -4,6 +4,7 @@ use crate::{
 };
 use chrono::{DateTime, Utc};
 use serde_json::{Map, Value};
+use std::fmt::Write;
 use tracing::Level;
 
 /// All the data required to create a Datadog-compatible log
@@ -33,7 +34,7 @@ impl DatadogLog {
             if field.name != "message" {
                 let value = field.value.trim_matches('\"');
 
-                message.push_str(&format!(" {}={}", field.name, value));
+                write!(message, " {}={}", field.name, value).expect("Failed to write to message");
                 log.insert(format!("fields.{}", &field.name), value.into());
             }
         }
