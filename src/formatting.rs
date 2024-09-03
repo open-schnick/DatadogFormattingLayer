@@ -73,31 +73,31 @@ mod format {
             datadog_ids: None,
         };
 
-        assert_that(trace.clone().format()).contains("\"level\":\"TRACE\"");
+        assert_that(trace.clone().format()).contains_string("\"level\":\"TRACE\"");
 
         let debug = DatadogLog {
             level: Level::DEBUG,
             ..trace
         };
-        assert_that(debug.clone().format()).contains("\"level\":\"DEBUG\"");
+        assert_that(debug.clone().format()).contains_string("\"level\":\"DEBUG\"");
 
         let info = DatadogLog {
             level: Level::INFO,
             ..debug
         };
-        assert_that(info.clone().format()).contains("\"level\":\"INFO\"");
+        assert_that(info.clone().format()).contains_string("\"level\":\"INFO\"");
 
         let warn = DatadogLog {
             level: Level::WARN,
             ..info
         };
-        assert_that(warn.clone().format()).contains("\"level\":\"WARN\"");
+        assert_that(warn.clone().format()).contains_string("\"level\":\"WARN\"");
 
         let error = DatadogLog {
             level: Level::ERROR,
             ..warn
         };
-        assert_that(error.format()).contains("\"level\":\"ERROR\"");
+        assert_that(error.format()).contains_string("\"level\":\"ERROR\"");
     }
 
     #[test]

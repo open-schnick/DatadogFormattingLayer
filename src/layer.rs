@@ -98,7 +98,7 @@ mod simple_layer {
         let events = sink.events();
         assert_that(&events).size().is(1);
 
-        assert_that(events).first().contains("\",\"level\":\"INFO\",\"message\":\"Hello World!\",\"target\":\"datadog_formatting_layer::layer::simple_layer\"}");
+        assert_that(events).first().contains_string("\",\"level\":\"INFO\",\"message\":\"Hello World!\",\"target\":\"datadog_formatting_layer::layer::simple_layer\"}");
     }
 
     #[test]
@@ -110,7 +110,7 @@ mod simple_layer {
         let events = sink.events();
         assert_that(&events).size().is(1);
 
-        assert_that(events).first().contains("\",\"level\":\"INFO\",\"fields.user\":\"John Doe\",\"message\":\"Hello World! user=John Doe\",\"target\":\"datadog_formatting_layer::layer::simple_layer\"}");
+        assert_that(events).first().contains_string("\",\"level\":\"INFO\",\"fields.user\":\"John Doe\",\"message\":\"Hello World! user=John Doe\",\"target\":\"datadog_formatting_layer::layer::simple_layer\"}");
     }
 
     #[allow(clippy::redundant_clone)]
@@ -123,9 +123,9 @@ mod simple_layer {
         let events = sink.events();
         assert_that(&events).size().is(3);
 
-        assert_that(events.clone()).first().contains("\",\"level\":\"DEBUG\",\"fields.first_value\":\"Argument\",\"message\":\"First Span! first_value=Argument\",\"target\":\"datadog_formatting_layer::layer::setup\"}");
-        assert_that(events.clone()).second().contains("\",\"level\":\"DEBUG\",\"fields.attr\":\"value\",\"fields.first_value\":\"Argument\",\"message\":\"Second Span! attr=value first_value=Argument\",\"target\":\"datadog_formatting_layer::layer::setup\"}");
-        assert_that(events.clone()).third().contains("\",\"level\":\"INFO\",\"fields.attr\":\"value\",\"fields.first_value\":\"Argument\",\"fields.return\":\"Return Value\",\"message\":\" attr=value first_value=Argument return=Return Value\",\"target\":\"datadog_formatting_layer::layer::setup\"}");
+        assert_that(events.clone()).first().contains_string("\",\"level\":\"DEBUG\",\"fields.first_value\":\"Argument\",\"message\":\"First Span! first_value=Argument\",\"target\":\"datadog_formatting_layer::layer::setup\"}");
+        assert_that(events.clone()).second().contains_string("\",\"level\":\"DEBUG\",\"fields.attr\":\"value\",\"fields.first_value\":\"Argument\",\"message\":\"Second Span! attr=value first_value=Argument\",\"target\":\"datadog_formatting_layer::layer::setup\"}");
+        assert_that(events.clone()).third().contains_string("\",\"level\":\"INFO\",\"fields.attr\":\"value\",\"fields.first_value\":\"Argument\",\"fields.return\":\"Return Value\",\"message\":\" attr=value first_value=Argument return=Return Value\",\"target\":\"datadog_formatting_layer::layer::setup\"}");
     }
 }
 
