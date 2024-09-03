@@ -111,9 +111,9 @@ Otherwise the following output will be printed to stdout (fields are excluded fo
 
 ## Supported Opentelemetry versions:
 
-| Opentelemetry | DatadogFormattingLayer |
+| OpenTelemetry | DatadogFormattingLayer |
 | ------------- | ---------------------- |
+| 0.23.\*       | 3.\*                   |
 | 0.22.\*       | 2.1.\*, 2.2.\*         |
-| 0.20.\*       | 2.0.\*                 |
-| 0.20.\*       | 1.1.\*                 |
+| 0.20.\*       | 1.1.\*, 2.0.\*         |
 | 0.19.\*       | 1.0.\*                 |
