@@ -3,13 +3,14 @@ use opentelemetry::global;
 use opentelemetry_datadog::ApiVersion;
 use opentelemetry_sdk::{
     propagation::TraceContextPropagator,
+    runtime::Tokio,
     trace::{config, RandomIdGenerator, Sampler},
 };
 use tracing::{debug, error, info, instrument, warn};
 use tracing_subscriber::{prelude::*, util::SubscriberInitExt};
 
-#[test]
-fn works_with_otel_stack() {
+#[tokio::test]
+async fn works_with_otel_stack() {
     // otel boilerplate
     global::set_text_map_propagator(TraceContextPropagator::new());
 
@@ -23,7 +24,7 @@ fn works_with_otel_stack() {
         .with_api_version(ApiVersion::Version05)
         .with_env("rls")
         .with_version("420")
-        .install_simple()
+        .install_batch(Tokio)
         .unwrap();
 
     tracing_subscriber::registry()

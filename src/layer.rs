@@ -137,9 +137,9 @@ mod layer_with_otel {
     use smoothy::assert_that;
     use tracing::info;
 
-    #[test]
-    fn without_spans_has_no_datadog_ids() {
-        let (sink, _guard) = setup_otel_subscriber();
+    #[tokio::test]
+    async fn without_spans_has_no_datadog_ids() {
+        let (sink, _guard) = setup_otel_subscriber().await;
 
         info!("Hello World!");
 
@@ -150,9 +150,9 @@ mod layer_with_otel {
         assert_that(events[0].span_id()).is_none();
     }
 
-    #[test]
-    fn with_spans_has_correct_datadog_ids() {
-        let (sink, _guard) = setup_otel_subscriber();
+    #[tokio::test]
+    async fn with_spans_has_correct_datadog_ids() {
+        let (sink, _guard) = setup_otel_subscriber().await;
 
         first_span("Argument");
 
@@ -181,6 +181,7 @@ mod setup {
     use opentelemetry_datadog::ApiVersion;
     use opentelemetry_sdk::{
         propagation::TraceContextPropagator,
+        runtime::Tokio,
         trace::{config, RandomIdGenerator, Sampler},
     };
     use serde_json::Value;
@@ -200,7 +201,7 @@ mod setup {
         (sink, guard)
     }
 
-    pub fn setup_otel_subscriber() -> (ObservableSink, DefaultGuard) {
+    pub async fn setup_otel_subscriber() -> (ObservableSink, DefaultGuard) {
         let sink = ObservableSink::default();
 
         // otel boilerplate
@@ -216,7 +217,7 @@ mod setup {
             .with_api_version(ApiVersion::Version05)
             .with_env("rls")
             .with_version("420")
-            .install_simple()
+            .install_batch(Tokio)
             .unwrap();
 
         let subscriber = tracing_subscriber::registry()

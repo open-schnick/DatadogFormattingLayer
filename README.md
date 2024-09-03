@@ -54,37 +54,42 @@ use datadog_formatting_layer::DatadogFormattingLayer;
 use opentelemetry::global;
 use opentelemetry_datadog::ApiVersion;
 use opentelemetry_sdk::{
+    runtime::Tokio,
     propagation::TraceContextPropagator,
     trace::{config, RandomIdGenerator, Sampler},
 };
 use tracing::{debug, error, info, instrument, warn};
 use tracing_subscriber::{prelude::*, util::SubscriberInitExt};
 
-// Just some otel boilerplate
-global::set_text_map_propagator(TraceContextPropagator::new());
+// the tracer needs async to run
+#[tokio::main]
+async fn main() {
+    // Just some otel boilerplate
+    global::set_text_map_propagator(TraceContextPropagator::new());
 
-let tracer = opentelemetry_datadog::new_pipeline()
-    .with_service_name("my-service")
-    .with_trace_config(
-        config()
-            .with_sampler(Sampler::AlwaysOn)
-            .with_id_generator(RandomIdGenerator::default()),
-    )
-    .with_api_version(ApiVersion::Version05)
-    .with_env("rls")
-    .with_version("420")
-    .install_simple()
-    .unwrap();
+    let tracer = opentelemetry_datadog::new_pipeline()
+        .with_service_name("my-service")
+        .with_trace_config(
+            config()
+                .with_sampler(Sampler::AlwaysOn)
+                .with_id_generator(RandomIdGenerator::default()),
+        )
+        .with_api_version(ApiVersion::Version05)
+        .with_env("rls")
+        .with_version("420")
+        .install_batch(Tokio)
+        .unwrap();
 
-// Use both the tracer and the formatting layer
-tracing_subscriber::registry()
-    .with(DatadogFormattingLayer::default())
-    .with(tracing_opentelemetry::layer().with_tracer(tracer))
-    .init();
+    // Use both the tracer and the formatting layer
+    tracing_subscriber::registry()
+        .with(DatadogFormattingLayer::default())
+        .with(tracing_opentelemetry::layer().with_tracer(tracer))
+        .init();
 
-// Here no span exists
-info!(user = "Jack", "Hello World!");
-some_test("fasel");
+    // Here no span exists
+    info!(user = "Jack", "Hello World!");
+    some_test("fasel");
+}
 
 // This will create a span and a trace id which is attached to the "logs"
 #[instrument(fields(hello = "world"))]
