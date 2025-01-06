@@ -1,3 +1,4 @@
+#![allow(missing_docs)]
 use datadog_formatting_layer::{DatadogFormattingLayer, StdoutSink};
 use tracing::warn;
 use tracing_subscriber::prelude::*;
