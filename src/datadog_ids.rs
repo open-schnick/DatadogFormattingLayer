@@ -45,8 +45,10 @@ where
     ctx.lookup_current().and_then(|span_ref| {
         span_ref.extensions().get::<OtelData>().map(|o| {
             let trace_id = if o.parent_cx.has_active_span() {
+                println!("Parent cx has active span with id {}", o.parent_cx.span().span_context().trace_id());
                 o.parent_cx.span().span_context().trace_id()
             } else {
+                println!("Parent cx has no active span but builder has trace id {}", o.builder.trace_id.unwrap_or(TraceId::INVALID));
                 o.builder.trace_id.unwrap_or(TraceId::INVALID)
             };
             (
