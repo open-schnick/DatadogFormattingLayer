@@ -99,10 +99,10 @@ fn some_test(value: &str) {
 }
 ```
 
-When running this code with an datadog agent installed the logs will be sent to datadog
+When running this code with a datadog agent installed the logs will be sent to datadog
 and parsed there.
 
-Otherwise the following output will be printed to stdout (fields are excluded for readability)
+Otherwise, the following output will be printed to stdout (fields are excluded for readability)
 
 ```json
 {"timestamp":"2023-06-21T10:36:50.363224217+00:00","level":"INFO","message":"Hello World! user=Jack","target":"otel"}
@@ -112,7 +112,7 @@ Otherwise the following output will be printed to stdout (fields are excluded fo
 ## Supported Opentelemetry versions:
 
 | OpenTelemetry | DatadogFormattingLayer |
-| ------------- | ---------------------- |
+|---------------|------------------------|
 | 0.23.\*       | 3.\*                   |
 | 0.22.\*       | 2.1.\*, 2.2.\*         |
 | 0.20.\*       | 1.1.\*, 2.0.\*         |

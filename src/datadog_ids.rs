@@ -12,8 +12,8 @@ impl From<TraceId> for DatadogTraceId {
     // TraceId are u128 -> 16 Bytes
     // but datadog needs u64 -> 8 Bytes
     // Therefore we just take the 8 most significant bytes
-    // This is not ideal and may lead to duplicate trace correlations
-    // but we cannot do anything against that anyways.
+    // This is not ideal and may lead to duplicate trace correlations,
+    // but we cannot do anything against that anyway.
     fn from(value: TraceId) -> Self {
         let bytes = value.to_bytes();
         // this cannot fail

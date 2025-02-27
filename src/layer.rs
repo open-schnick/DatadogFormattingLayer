@@ -53,7 +53,7 @@ impl<S: Subscriber + for<'a> LookupSpan<'a>, Sink: EventSink + 'static> Layer<S>
         }
     }
 
-    // IDEA: maybe a on record implementation is required here
+    // IDEA: maybe an on record implementation is required here
 
     fn on_event(&self, event: &Event<'_>, ctx: Context<'_, S>) {
         let event_fields = fields::from_event(event);
