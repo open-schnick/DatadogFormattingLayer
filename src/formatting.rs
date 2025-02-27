@@ -176,6 +176,7 @@ mod format {
         assert_that(sut.format()).is(json!({"timestamp": "2022-01-01T00:00:00+00:00", "level": "INFO", "fields.a": "c", "fields.b": "b", "fields.c": "a", "message": "Hello World! a=c b=b c=a", "target": "target"}).to_string());
     }
 
+    #[allow(missing_docs)]
     #[macro_export]
     macro_rules! timestamp {
         ($date:expr) => {

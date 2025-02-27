@@ -6,6 +6,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+- [**breaking**] bump opentelemetry to 0.28.0
+
 ## [3.0.0](https://github.com/open-schnick/DatadogFormattingLayer/compare/v2.2.1...v3.0.0) - 2024-09-03
 
 ### Added

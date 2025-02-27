@@ -51,34 +51,34 @@ Running this code will result in the following output on stdout:
 
 ```rust
 use datadog_formatting_layer::DatadogFormattingLayer;
-use opentelemetry::global;
+use opentelemetry::{global, trace::TracerProvider};
 use opentelemetry_datadog::ApiVersion;
 use opentelemetry_sdk::{
-    runtime::Tokio,
     propagation::TraceContextPropagator,
-    trace::{config, RandomIdGenerator, Sampler},
+    trace::{Config, RandomIdGenerator, Sampler},
 };
 use tracing::{debug, error, info, instrument, warn};
 use tracing_subscriber::{prelude::*, util::SubscriberInitExt};
 
-// the tracer needs async to run
-#[tokio::main]
-async fn main() {
+// Note the tracer cannot be async to run.
+fn main() {
     // Just some otel boilerplate
     global::set_text_map_propagator(TraceContextPropagator::new());
 
-    let tracer = opentelemetry_datadog::new_pipeline()
+    let provider = opentelemetry_datadog::new_pipeline()
         .with_service_name("my-service")
         .with_trace_config(
-            config()
+            Config::default()
                 .with_sampler(Sampler::AlwaysOn)
                 .with_id_generator(RandomIdGenerator::default()),
         )
         .with_api_version(ApiVersion::Version05)
         .with_env("rls")
         .with_version("420")
-        .install_batch(Tokio)
+        .install_batch()
         .unwrap();
+    
+    let tracer = provider.tracer("opentelemetry");
 
     // Use both the tracer and the formatting layer
     tracing_subscriber::registry()

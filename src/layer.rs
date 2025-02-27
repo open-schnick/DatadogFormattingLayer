@@ -137,9 +137,8 @@ mod layer_with_otel {
     use smoothy::assert_that;
     use tracing::info;
 
-    #[tokio::test]
-    async fn without_spans_has_no_datadog_ids() {
-        let (sink, _guard) = setup_otel_subscriber().await;
+    fn without_spans_has_no_datadog_ids() {
+        let (sink, _guard) = setup_otel_subscriber();
 
         info!("Hello World!");
 
@@ -150,9 +149,8 @@ mod layer_with_otel {
         assert_that(events[0].span_id()).is_none();
     }
 
-    #[tokio::test]
-    async fn with_spans_has_correct_datadog_ids() {
-        let (sink, _guard) = setup_otel_subscriber().await;
+    fn with_spans_has_correct_datadog_ids() {
+        let (sink, _guard) = setup_otel_subscriber();
 
         first_span("Argument");
 
@@ -177,12 +175,11 @@ mod layer_with_otel {
 #[cfg(test)]
 mod setup {
     use super::*;
-    use opentelemetry::global;
+    use opentelemetry::{global, trace::TracerProvider};
     use opentelemetry_datadog::ApiVersion;
     use opentelemetry_sdk::{
         propagation::TraceContextPropagator,
-        runtime::Tokio,
-        trace::{config, RandomIdGenerator, Sampler},
+        trace::{Config, RandomIdGenerator, Sampler},
     };
     use serde_json::Value;
     use smoothy::BasicAsserter;
@@ -201,24 +198,26 @@ mod setup {
         (sink, guard)
     }
 
-    pub async fn setup_otel_subscriber() -> (ObservableSink, DefaultGuard) {
+    pub fn setup_otel_subscriber() -> (ObservableSink, DefaultGuard) {
         let sink = ObservableSink::default();
 
         // otel boilerplate
         global::set_text_map_propagator(TraceContextPropagator::new());
 
-        let tracer = opentelemetry_datadog::new_pipeline()
+        let provider = opentelemetry_datadog::new_pipeline()
             .with_service_name("my-service")
             .with_trace_config(
-                config()
+                Config::default()
                     .with_sampler(Sampler::AlwaysOn)
                     .with_id_generator(RandomIdGenerator::default()),
             )
             .with_api_version(ApiVersion::Version05)
             .with_env("rls")
             .with_version("420")
-            .install_batch(Tokio)
+            .install_batch()
             .unwrap();
+
+        let tracer = provider.tracer("opentelemetry");
 
         let subscriber = tracing_subscriber::registry()
             .with(DatadogFormattingLayer::with_sink(sink.clone()))

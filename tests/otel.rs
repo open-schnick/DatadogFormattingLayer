@@ -1,31 +1,33 @@
+#![allow(missing_docs)]
 use datadog_formatting_layer::DatadogFormattingLayer;
-use opentelemetry::global;
+use opentelemetry::{global, trace::TracerProvider};
 use opentelemetry_datadog::ApiVersion;
 use opentelemetry_sdk::{
     propagation::TraceContextPropagator,
-    runtime::Tokio,
-    trace::{config, RandomIdGenerator, Sampler},
+    trace::{Config, RandomIdGenerator, Sampler},
 };
 use tracing::{debug, error, info, instrument, warn};
 use tracing_subscriber::{prelude::*, util::SubscriberInitExt};
 
-#[tokio::test]
-async fn works_with_otel_stack() {
+#[test]
+fn works_with_otel_stack() {
     // otel boilerplate
     global::set_text_map_propagator(TraceContextPropagator::new());
 
-    let tracer = opentelemetry_datadog::new_pipeline()
+    let provider = opentelemetry_datadog::new_pipeline()
         .with_service_name("my-service")
         .with_trace_config(
-            config()
+            Config::default()
                 .with_sampler(Sampler::AlwaysOn)
                 .with_id_generator(RandomIdGenerator::default()),
         )
         .with_api_version(ApiVersion::Version05)
         .with_env("rls")
         .with_version("420")
-        .install_batch(Tokio)
+        .install_batch()
         .unwrap();
+
+    let tracer = provider.tracer("opentelemetry");
 
     tracing_subscriber::registry()
         .with(DatadogFormattingLayer::default())
