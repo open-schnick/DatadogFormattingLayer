@@ -60,7 +60,7 @@ mod format {
     use super::*;
     use crate::timestamp;
     use serde_json::json;
-    use smoothy::assert_that;
+    use smoothy::prelude::*;
 
     #[test]
     fn different_levels() {
@@ -73,31 +73,31 @@ mod format {
             datadog_ids: None,
         };
 
-        assert_that(trace.clone().format()).contains_string("\"level\":\"TRACE\"");
+        assert_that(trace.clone().format()).contains("\"level\":\"TRACE\"");
 
         let debug = DatadogLog {
             level: Level::DEBUG,
             ..trace
         };
-        assert_that(debug.clone().format()).contains_string("\"level\":\"DEBUG\"");
+        assert_that(debug.clone().format()).contains("\"level\":\"DEBUG\"");
 
         let info = DatadogLog {
             level: Level::INFO,
             ..debug
         };
-        assert_that(info.clone().format()).contains_string("\"level\":\"INFO\"");
+        assert_that(info.clone().format()).contains("\"level\":\"INFO\"");
 
         let warn = DatadogLog {
             level: Level::WARN,
             ..info
         };
-        assert_that(warn.clone().format()).contains_string("\"level\":\"WARN\"");
+        assert_that(warn.clone().format()).contains("\"level\":\"WARN\"");
 
         let error = DatadogLog {
             level: Level::ERROR,
             ..warn
         };
-        assert_that(error.format()).contains_string("\"level\":\"ERROR\"");
+        assert_that(error.format()).contains("\"level\":\"ERROR\"");
     }
 
     #[test]
@@ -176,6 +176,7 @@ mod format {
         assert_that(sut.format()).is(json!({"timestamp": "2022-01-01T00:00:00+00:00", "level": "INFO", "fields.a": "c", "fields.b": "b", "fields.c": "a", "message": "Hello World! a=c b=b c=a", "target": "target"}).to_string());
     }
 
+    #[allow(missing_docs)]
     #[macro_export]
     macro_rules! timestamp {
         ($date:expr) => {

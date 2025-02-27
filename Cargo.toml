@@ -27,8 +27,7 @@ opentelemetry = { version = "0.23", default-features = false }
 tokio = { version = "1", features = ["macros", "rt-multi-thread"] }
 opentelemetry-datadog = { version = "0.11", features = ["reqwest-client"] }
 opentelemetry_sdk = { version = "0.23", features = ["rt-tokio"] }
-regex = "1.10"
-smoothy = "0.5"
+smoothy = "0.7"
 
 [lints.rust]
 missing_docs = "deny"
