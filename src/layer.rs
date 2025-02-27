@@ -17,6 +17,14 @@ pub struct DatadogFormattingLayer<Sink: EventSink + 'static> {
 
 impl<S: EventSink + 'static> DatadogFormattingLayer<S> {
     /// Create a new `DatadogFormattingLayer` with the provided event sink
+    ///
+    /// # Example
+    /// ```
+    /// use datadog_formatting_layer::{DatadogFormattingLayer, EventSink, StdoutSink};
+    ///
+    /// let layer: DatadogFormattingLayer<StdoutSink> =
+    ///     DatadogFormattingLayer::with_sink(StdoutSink::default());
+    /// ```
     pub const fn with_sink(sink: S) -> Self {
         Self { event_sink: sink }
     }

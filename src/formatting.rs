@@ -48,9 +48,7 @@ impl DatadogLog {
             log.insert("dd.span_id".to_string(), span_id.0.into());
         }
 
-        let json = Value::Object(log);
-
-        serde_json::to_string(&json)
+        serde_json::to_string(&Value::from(log))
             .unwrap_or_else(|err| format!("Failed to serialize a log to json: {err}"))
     }
 }
