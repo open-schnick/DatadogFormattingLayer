@@ -51,40 +51,38 @@ Running this code will result in the following output on stdout:
 
 ```rust
 use datadog_formatting_layer::DatadogFormattingLayer;
-use opentelemetry::global;
+use opentelemetry::{global, trace::TracerProvider};
 use opentelemetry_datadog::ApiVersion;
-use opentelemetry_sdk::{
-    runtime::Tokio,
-    propagation::TraceContextPropagator,
-    trace::{config, RandomIdGenerator, Sampler},
-};
-use tracing::{debug, error, info, instrument, warn};
-use tracing_subscriber::{prelude::*, util::SubscriberInitExt};
+use opentelemetry_sdk::trace::{Config, RandomIdGenerator, Sampler};
+use tracing::{dispatcher::DefaultGuard, info, Level, instrument};
+use tracing_subscriber::{filter::Targets, prelude::*};
 
-// the tracer needs async to run
-#[tokio::main]
-async fn main() {
-    // Just some otel boilerplate
-    global::set_text_map_propagator(TraceContextPropagator::new());
-
-    let tracer = opentelemetry_datadog::new_pipeline()
+fn main() {
+    // IMPORTANT: as of otel version 0.28 this has to be called outside the context of an async runtime
+    let provider = opentelemetry_datadog::new_pipeline()
         .with_service_name("my-service")
         .with_trace_config(
-            config()
+            Config::default()
                 .with_sampler(Sampler::AlwaysOn)
                 .with_id_generator(RandomIdGenerator::default()),
         )
         .with_api_version(ApiVersion::Version05)
         .with_env("rls")
         .with_version("420")
-        .install_batch(Tokio)
+        .install_batch()
         .unwrap();
 
+    let tracer = provider.tracer("my-service");
+
+    global::set_tracer_provider(provider);
+
     // Use both the tracer and the formatting layer
-    tracing_subscriber::registry()
+    let subscriber = tracing_subscriber::registry()
+        .with(tracing_subscriber::fmt::layer())
         .with(DatadogFormattingLayer::default())
-        .with(tracing_opentelemetry::layer().with_tracer(tracer))
-        .init();
+        .with(tracing_opentelemetry::layer().with_tracer(tracer));
+
+    let _guard = tracing::subscriber::set_default(subscriber);
 
     // Here no span exists
     info!(user = "Jack", "Hello World!");

@@ -1,19 +1,15 @@
 use crate::{first_span, ObservableSink};
 use datadog_formatting_layer::DatadogFormattingLayer;
-use opentelemetry::global;
+use opentelemetry::{global, trace::TracerProvider};
 use opentelemetry_datadog::ApiVersion;
-use opentelemetry_sdk::{
-    propagation::TraceContextPropagator,
-    runtime::Tokio,
-    trace::{config, RandomIdGenerator, Sampler},
-};
+use opentelemetry_sdk::trace::{Config, RandomIdGenerator, Sampler};
 use serde_json::Value;
 use smoothy::prelude::*;
 use tracing::{dispatcher::DefaultGuard, info, Level};
 use tracing_subscriber::{filter::Targets, prelude::*};
 
-#[tokio::test]
-async fn without_spans_has_no_datadog_ids() {
+#[test]
+fn without_spans_has_no_datadog_ids() {
     let (sink, _guard) = setup_otel_subscriber();
 
     info!("Hello World!");
@@ -25,8 +21,8 @@ async fn without_spans_has_no_datadog_ids() {
     assert_that(events[0].span_id()).is_none();
 }
 
-#[tokio::test]
-async fn with_spans_has_correct_datadog_ids() {
+#[test]
+fn with_spans_has_correct_datadog_ids() {
     let (sink, _guard) = setup_otel_subscriber();
 
     first_span("Argument");
@@ -51,21 +47,23 @@ async fn with_spans_has_correct_datadog_ids() {
 fn setup_otel_subscriber() -> (ObservableSink, DefaultGuard) {
     let sink = ObservableSink::default();
 
-    // otel boilerplate
-    global::set_text_map_propagator(TraceContextPropagator::new());
-
-    let tracer = opentelemetry_datadog::new_pipeline()
+    #[allow(deprecated)]
+    let provider = opentelemetry_datadog::new_pipeline()
         .with_service_name("my-service")
         .with_trace_config(
-            config()
+            Config::default()
                 .with_sampler(Sampler::AlwaysOn)
                 .with_id_generator(RandomIdGenerator::default()),
         )
         .with_api_version(ApiVersion::Version05)
         .with_env("rls")
         .with_version("420")
-        .install_batch(Tokio)
+        .install_simple()
         .unwrap();
+
+    let tracer = provider.tracer("my-service");
+
+    global::set_tracer_provider(provider);
 
     let subscriber = tracing_subscriber::registry()
         .with(tracing_subscriber::fmt::layer())
@@ -77,6 +75,7 @@ fn setup_otel_subscriber() -> (ObservableSink, DefaultGuard) {
                 .with_target("layer", Level::TRACE)
                 .with_default(Level::ERROR),
         );
+
     let guard = tracing::subscriber::set_default(subscriber);
 
     (sink, guard)
