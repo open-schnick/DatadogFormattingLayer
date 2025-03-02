@@ -1,47 +1,93 @@
-use crate::{first_span, ObservableSink};
+use crate::ObservableSink;
 use datadog_formatting_layer::DatadogFormattingLayer;
 use opentelemetry::{global, trace::TracerProvider};
 use opentelemetry_datadog::ApiVersion;
 use opentelemetry_sdk::trace::{Config, RandomIdGenerator, Sampler};
 use serde_json::Value;
 use smoothy::prelude::*;
-use tracing::{dispatcher::DefaultGuard, info, Level};
+use tracing::{debug, dispatcher::DefaultGuard, error, info, instrument, span, warn, Level};
 use tracing_subscriber::{filter::Targets, prelude::*};
 
 #[test]
-fn without_spans_has_no_datadog_ids() {
+fn events_outside_spans_have_no_datadog_ids() {
     let (sink, _guard) = setup_otel_subscriber();
 
     info!("Hello World!");
 
     let events = sink.events();
 
-    assert_that(events.clone()).size().is(1);
+    assert_that(&events).size().is(1);
     assert_that(events[0].trace_id()).is_none();
     assert_that(events[0].span_id()).is_none();
 }
 
 #[test]
-fn with_spans_has_correct_datadog_ids() {
+fn first_span_generates_trace_id() {
     let (sink, _guard) = setup_otel_subscriber();
 
-    first_span("Argument");
+    info!("No trace or span");
+
+    span!(Level::INFO, "span").in_scope(|| debug!("This has a trace and a span"));
+
+    let events = sink.events();
+
+    assert_that(&events).size().is(2);
+    assert_that(events[0].trace_id()).is_none();
+    assert_that(events[0].span_id()).is_none();
+    assert_that(events[1].trace_id()).is_valid();
+    assert_that(events[1].span_id()).is_valid();
+}
+
+#[test]
+fn events_in_nested_spans_have_correct_ids() {
+    let (sink, _guard) = setup_otel_subscriber();
+
+    span!(Level::INFO, "first span").in_scope(|| {
+        debug!("This has a trace and a span id");
+
+        span!(Level::INFO, "second span")
+            .in_scope(|| error!("This has the same trace id but a different span id"));
+
+        warn!("This has the same trace and span id as the first");
+    });
 
     let events = sink.events();
     assert_that(&events).size().is(3);
 
-    // First message has no trace id but a span id
-    assert_that(events[0].trace_id()).is_not_valid();
+    // First message generated trace and span id
+    assert_that(events[0].trace_id()).is_valid();
     assert_that(events[0].span_id()).is_valid();
-    // second message has trace id and different span id
-    assert_that(events[1].trace_id()).is_valid();
+    // second message has the same trace id but a different span id
+    assert_that(events[1].trace_id()).is(events[0].trace_id());
     assert_that(events[1].span_id()).is_valid();
     assert_that(events[1].span_id()).is_not(events[0].span_id());
-    // third message has same trace id as the second and different span id
-    assert_that(events[2].trace_id()).is_valid();
-    assert_that(events[2].trace_id()).is(events[1].trace_id());
-    assert_that(events[2].span_id()).is_valid();
-    assert_that(events[2].span_id()).is(events[1].span_id());
+    // third message has same trace and span id as the first
+    assert_that(events[2].trace_id()).is(events[0].trace_id());
+    assert_that(events[2].span_id()).is(events[0].span_id());
+}
+
+#[test]
+fn events_created_by_instrument_macro_are_correctly_printed() {
+    #[instrument(ret)]
+    fn first(args: &str) {
+        debug!("In first {args}");
+        let _ = second();
+    }
+    #[instrument(ret)]
+    fn second() -> Result<(), String> {
+        Err("Error!".to_string())
+    }
+
+    let (sink, _guard) = setup_otel_subscriber();
+
+    first("Span");
+
+    let events = sink.events();
+    assert_that(&events).size().is(3);
+
+    assert_that(events.clone()).first().contains("\"level\":\"DEBUG\",\"fields.args\":\"Span\",\"message\":\"In first Span args=Span\",\"target\":\"layer::otel\"");
+    assert_that(events.clone()).second().contains("\"level\":\"INFO\",\"fields.args\":\"Span\",\"fields.return\":\"Err(\\\"Error!\\\")\",\"message\":\" args=Span return=Err(\\\"Error!\\\")\",\"target\":\"layer::otel\"");
+    assert_that(events.clone()).third().contains("\"level\":\"INFO\",\"fields.args\":\"Span\",\"fields.return\":\"()\",\"message\":\" args=Span return=()\",\"target\":\"layer::otel\"");
 }
 
 fn setup_otel_subscriber() -> (ObservableSink, DefaultGuard) {
@@ -103,16 +149,10 @@ impl LogMessageExt for String {
 pub trait SmoothyExt {
     #[allow(clippy::wrong_self_convention)]
     fn is_valid(self);
-    #[allow(clippy::wrong_self_convention)]
-    fn is_not_valid(self);
 }
 
 impl SmoothyExt for BasicAsserter<Option<u64>> {
     fn is_valid(self) {
         self.is_some().and_value().is_not(0);
-    }
-
-    fn is_not_valid(self) {
-        self.is_some().and_value().is(0);
     }
 }

@@ -1,7 +1,7 @@
-use crate::{first_span, ObservableSink};
+use crate::ObservableSink;
 use datadog_formatting_layer::DatadogFormattingLayer;
 use smoothy::prelude::*;
-use tracing::{dispatcher::DefaultGuard, info, Level};
+use tracing::{debug, dispatcher::DefaultGuard, info, instrument, Level};
 use tracing_subscriber::{prelude::*, FmtSubscriber};
 
 #[test]
@@ -33,16 +33,26 @@ fn fields_are_formatted_and_printed() {
 #[allow(clippy::redundant_clone)]
 #[test]
 fn complex_logs() {
+    #[instrument(ret)]
+    fn first(args: &str) {
+        debug!("In first {args}");
+        let _ = second();
+    }
+    #[instrument(ret)]
+    fn second() -> Result<(), String> {
+        Err("Error!".to_string())
+    }
+
     let (sink, _guard) = setup_simple_subscriber();
 
-    first_span("Argument");
+    first("Span");
 
     let events = sink.events();
     assert_that(&events).size().is(3);
 
-    assert_that(events.clone()).first().contains("\",\"level\":\"DEBUG\",\"fields.first_value\":\"Argument\",\"message\":\"First Span! first_value=Argument\",\"target\":\"layer\"}");
-    assert_that(events.clone()).second().contains("\",\"level\":\"DEBUG\",\"fields.attr\":\"value\",\"fields.first_value\":\"Argument\",\"message\":\"Second Span! attr=value first_value=Argument\",\"target\":\"layer\"}");
-    assert_that(events.clone()).third().contains("\",\"level\":\"INFO\",\"fields.attr\":\"value\",\"fields.first_value\":\"Argument\",\"fields.return\":\"Return Value\",\"message\":\" attr=value first_value=Argument return=Return Value\",\"target\":\"layer\"}");
+    assert_that(events.clone()).first().contains("\"level\":\"DEBUG\",\"fields.args\":\"Span\",\"message\":\"In first Span args=Span\",\"target\":\"layer::simple\"}");
+    assert_that(events.clone()).second().contains("\"level\":\"INFO\",\"fields.args\":\"Span\",\"fields.return\":\"Err(\\\"Error!\\\")\",\"message\":\" args=Span return=Err(\\\"Error!\\\")\",\"target\":\"layer::simple\"}");
+    assert_that(events.clone()).third().contains("\"level\":\"INFO\",\"fields.args\":\"Span\",\"fields.return\":\"()\",\"message\":\" args=Span return=()\",\"target\":\"layer::simple\"}");
 }
 
 fn setup_simple_subscriber() -> (ObservableSink, DefaultGuard) {
