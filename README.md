@@ -103,14 +103,27 @@ and parsed there.
 Otherwise, the following output will be printed to stdout (fields are excluded for readability)
 
 ```json
-{"timestamp":"2023-06-21T10:36:50.363224217+00:00","level":"INFO","message":"Hello World! user=Jack","target":"otel"}
-{"timestamp":"2023-06-21T10:36:50.363384118+00:00","level":"INFO","message":"Bla fasel user=Jack ola=salve value=Fasel hello=world","target":"otel","dd.trace_id":0,"dd.span_id":10201226522570980512}
+{
+  "timestamp": "2023-06-21T10:36:50.363224217+00:00",
+  "level": "INFO",
+  "message": "Hello World! user=Jack",
+  "target": "otel"
+}
+{
+  "timestamp": "2023-06-21T10:36:50.363384118+00:00",
+  "level": "INFO",
+  "message": "Bla fasel user=Jack ola=salve value=Fasel hello=world",
+  "target": "otel",
+  "dd.trace_id": 0,
+  "dd.span_id": 10201226522570980512
+}
 ```
 
 ## Supported Opentelemetry versions:
 
 | OpenTelemetry | DatadogFormattingLayer |
 |---------------|------------------------|
+| 0.28.\*       | 4.\*                   |
 | 0.23.\*       | 3.\*                   |
 | 0.22.\*       | 2.1.\*, 2.2.\*         |
 | 0.20.\*       | 1.1.\*, 2.0.\*         |
