@@ -6,6 +6,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [4.0.0](https://github.com/open-schnick/DatadogFormattingLayer/compare/v3.0.0...v4.0.0) - 2025-03-02
+
+### Other
+
+- update README in preparation of releasing new version
+- *(deps)* [**breaking**] Upgrade to opentelemetry 0.28
+- move tests from layer into tests folder
+- fix typos
+- move test into doc test
+- update smoothy and restructure tests
+
 ## [3.0.0](https://github.com/open-schnick/DatadogFormattingLayer/compare/v2.2.1...v3.0.0) - 2024-09-03
 
 ### Added
