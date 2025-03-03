@@ -6,6 +6,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [4.0.2](https://github.com/open-schnick/DatadogFormattingLayer/compare/v4.0.1...v4.0.2) - 2025-03-03
+
+### Other
+
+- add missing link to crates.io
+
 ## [4.0.1](https://github.com/open-schnick/DatadogFormattingLayer/compare/v4.0.0...v4.0.1) - 2025-03-02
 
 ### Fixed
