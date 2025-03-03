@@ -5,7 +5,7 @@ A crate providing a tracing-subscriber layer for formatting events so Datadog ca
 [![Release](https://github.com/open-schnick/DatadogFormattingLayer/actions/workflows/release.yml/badge.svg)](https://github.com/open-schnick/DatadogFormattingLayer/actions/workflows/release.yml)
 [![Test](https://github.com/open-schnick/DatadogFormattingLayer/actions/workflows/test.yml/badge.svg)](https://github.com/open-schnick/DatadogFormattingLayer/actions/workflows/test.yml)
 ![License](https://img.shields.io/crates/l/datadog-formatting-layer)
-![Crates.io](https://img.shields.io/crates/v/datadog-formatting-layer)
+[![Crates.io](https://img.shields.io/crates/v/datadog-formatting-layer)](https://crates.io/crates/datadog-formatting-layer)
 
 ## Features
 
@@ -122,7 +122,7 @@ Otherwise, the following output will be printed to stdout (fields are excluded f
 ## Supported Opentelemetry versions:
 
 | OpenTelemetry | DatadogFormattingLayer |
-|---------------|------------------------|
+| ------------- | ---------------------- |
 | 0.28.\*       | 4.\*                   |
 | 0.23.\*       | 3.\*                   |
 | 0.22.\*       | 2.1.\*, 2.2.\*         |
