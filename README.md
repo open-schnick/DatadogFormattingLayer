@@ -58,14 +58,10 @@ use tracing::{dispatcher::DefaultGuard, info, Level, instrument};
 use tracing_subscriber::{filter::Targets, prelude::*};
 
 fn main() {
-    // IMPORTANT: as of otel version 0.28 this has to be called outside the context of an async runtime
+    // IMPORTANT: as of otel version 0.28+ this has to be called outside the context of an async runtime
     let provider = opentelemetry_datadog::new_pipeline()
         .with_service_name("my-service")
-        .with_trace_config(
-            Config::default()
-                .with_sampler(Sampler::AlwaysOn)
-                .with_id_generator(RandomIdGenerator::default()),
-        )
+        .with_trace_config(Config::default())
         .with_api_version(ApiVersion::Version05)
         .with_env("rls")
         .with_version("420")
@@ -123,6 +119,7 @@ Otherwise, the following output will be printed to stdout (fields are excluded f
 
 | OpenTelemetry | DatadogFormattingLayer |
 | ------------- | ---------------------- |
+| 0.29.\*       | 5.\*                   |
 | 0.28.\*       | 4.\*                   |
 | 0.23.\*       | 3.\*                   |
 | 0.22.\*       | 2.1.\*, 2.2.\*         |

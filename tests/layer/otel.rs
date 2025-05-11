@@ -2,7 +2,7 @@ use crate::ObservableSink;
 use datadog_formatting_layer::DatadogFormattingLayer;
 use opentelemetry::{global, trace::TracerProvider};
 use opentelemetry_datadog::ApiVersion;
-use opentelemetry_sdk::trace::{Config, RandomIdGenerator, Sampler};
+use opentelemetry_sdk::trace::Config;
 use serde_json::Value;
 use smoothy::prelude::*;
 use tracing::{debug, dispatcher::DefaultGuard, error, info, instrument, span, warn, Level};
@@ -93,14 +93,9 @@ fn events_created_by_instrument_macro_are_correctly_printed() {
 fn setup_otel_subscriber() -> (ObservableSink, DefaultGuard) {
     let sink = ObservableSink::default();
 
-    #[allow(deprecated)]
     let provider = opentelemetry_datadog::new_pipeline()
         .with_service_name("my-service")
-        .with_trace_config(
-            Config::default()
-                .with_sampler(Sampler::AlwaysOn)
-                .with_id_generator(RandomIdGenerator::default()),
-        )
+        .with_trace_config(Config::default())
         .with_api_version(ApiVersion::Version05)
         .with_env("rls")
         .with_version("420")
