@@ -6,6 +6,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [6.0.0](https://github.com/open-schnick/DatadogFormattingLayer/compare/v5.0.0...v6.0.0) - 2025-06-25
+
+### Other
+
+- *(deps)* [**breaking**] Upgrade to opentelemetry 0.29
+- fix clippy lints
+
 ## [5.0.0](https://github.com/open-schnick/DatadogFormattingLayer/compare/v4.0.1...v5.0.0) - 2025-05-29
 
 ### Other
