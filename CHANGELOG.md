@@ -6,6 +6,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [6.0.1](https://github.com/open-schnick/DatadogFormattingLayer/compare/v6.0.0...v6.0.1) - 2025-06-25
+
+### Other
+
+- add new version to README
+
 ## [6.0.0](https://github.com/open-schnick/DatadogFormattingLayer/compare/v5.0.0...v6.0.0) - 2025-06-25
 
 ### Other
