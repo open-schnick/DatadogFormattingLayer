@@ -29,8 +29,8 @@ use tracing::info;
 use tracing_subscriber::prelude::*;
 
 tracing_subscriber::registry()
-    .with(DatadogFormattingLayer::default())
-    .init();
+.with(DatadogFormattingLayer::default ())
+.init();
 
 info!(user = "Jack", "Hello World!");
 ```
@@ -118,7 +118,8 @@ Otherwise, the following output will be printed to stdout (fields are excluded f
 ## Supported Opentelemetry versions:
 
 | OpenTelemetry | DatadogFormattingLayer |
-| ------------- | ---------------------- |
+|---------------|------------------------|
+| 0.30.\*       | 6.\*                   |
 | 0.29.\*       | 5.\*                   |
 | 0.28.\*       | 4.\*                   |
 | 0.23.\*       | 3.\*                   |
