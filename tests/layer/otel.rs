@@ -68,6 +68,7 @@ fn events_in_nested_spans_have_correct_ids() {
 
 #[test]
 fn events_created_by_instrument_macro_are_correctly_printed() {
+    #[allow(clippy::let_underscore_untyped, clippy::let_underscore_must_use)]
     #[instrument(ret)]
     fn first(args: &str) {
         debug!("In first {args}");
@@ -87,7 +88,7 @@ fn events_created_by_instrument_macro_are_correctly_printed() {
 
     assert_that(events.clone()).first().contains("\"level\":\"DEBUG\",\"fields.args\":\"Span\",\"message\":\"In first Span args=Span\",\"target\":\"layer::otel\"");
     assert_that(events.clone()).second().contains("\"level\":\"INFO\",\"fields.args\":\"Span\",\"fields.return\":\"Err(\\\"Error!\\\")\",\"message\":\" args=Span return=Err(\\\"Error!\\\")\",\"target\":\"layer::otel\"");
-    assert_that(events.clone()).third().contains("\"level\":\"INFO\",\"fields.args\":\"Span\",\"fields.return\":\"()\",\"message\":\" args=Span return=()\",\"target\":\"layer::otel\"");
+    assert_that(events).third().contains("\"level\":\"INFO\",\"fields.args\":\"Span\",\"fields.return\":\"()\",\"message\":\" args=Span return=()\",\"target\":\"layer::otel\"");
 }
 
 fn setup_otel_subscriber() -> (ObservableSink, DefaultGuard) {

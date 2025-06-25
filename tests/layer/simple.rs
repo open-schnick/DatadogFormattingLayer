@@ -33,6 +33,7 @@ fn fields_are_formatted_and_printed() {
 #[allow(clippy::redundant_clone)]
 #[test]
 fn complex_logs() {
+    #[allow(clippy::let_underscore_untyped, clippy::let_underscore_must_use)]
     #[instrument(ret)]
     fn first(args: &str) {
         debug!("In first {args}");
