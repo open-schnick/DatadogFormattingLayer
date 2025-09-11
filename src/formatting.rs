@@ -34,6 +34,8 @@ impl DatadogLog {
             if field.name != "message" {
                 let value = field.value.trim_matches('\"');
 
+                // should never fail
+                #[allow(clippy::expect_used)]
                 write!(message, " {}={}", field.name, value).expect("Failed to write to message");
                 log.insert(format!("fields.{}", &field.name), value.into());
             }
