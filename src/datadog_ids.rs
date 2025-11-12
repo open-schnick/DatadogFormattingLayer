@@ -1,4 +1,4 @@
-use opentelemetry::trace::{SpanId, TraceContextExt, TraceId};
+use opentelemetry::trace::{SpanId, TraceId};
 use tracing::Subscriber;
 use tracing_opentelemetry::OtelData;
 use tracing_subscriber::{layer::Context, registry::LookupSpan};
@@ -43,17 +43,11 @@ where
     S: Subscriber + for<'a> LookupSpan<'a>,
 {
     ctx.lookup_current().and_then(|span_ref| {
-        span_ref.extensions().get::<OtelData>().map(|o| {
-            let trace_id = if o.parent_cx.has_active_span() {
-                o.parent_cx.span().span_context().trace_id()
-            } else {
-                o.builder.trace_id.unwrap_or(TraceId::INVALID)
-            };
+        span_ref.extensions().get::<OtelData>().map(|otel| {
+            let trace_id = otel.trace_id().unwrap_or(TraceId::INVALID);
+            let span_id = otel.span_id().unwrap_or(SpanId::INVALID);
 
-            (
-                trace_id.into(),
-                o.builder.span_id.unwrap_or(SpanId::INVALID).into(),
-            )
+            (trace_id.into(), span_id.into())
         })
     })
 }
