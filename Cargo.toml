@@ -20,14 +20,14 @@ serde_json = { version = "1", features = ["preserve_order"] }
 tracing = "0.1"
 tracing-subscriber = "0.3"
 # otel
-tracing-opentelemetry = { version = "0.32", default-features = false }
-opentelemetry = { version = "0.31", default-features = false }
+tracing-opentelemetry = { version = "0.33", default-features = false }
+opentelemetry = { version = "0.32", default-features = false }
 
 [dev-dependencies]
-opentelemetry-datadog = { version = "0.19", features = [
+opentelemetry-datadog = { version = "0.20", features = [
   "reqwest-blocking-client",
 ] }
-opentelemetry_sdk = "0.31"
+opentelemetry_sdk = "0.32"
 smoothy = "0.10"
 
 [lints.rust]
