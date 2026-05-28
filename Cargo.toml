@@ -9,7 +9,7 @@ repository = "https://github.com/open-schnick/DatadogFormattingLayer"
 license = "Apache-2.0"
 keywords = ["tracing", "tracing-subscriber", "layer", "datadog"]
 categories = ["development-tools::debugging"]
-version = "7.0.0"
+version = "8.0.0"
 edition = "2021"
 
 [dependencies]
@@ -20,12 +20,12 @@ serde_json = { version = "1", features = ["preserve_order"] }
 tracing = "0.1"
 tracing-subscriber = "0.3"
 # otel
-tracing-opentelemetry = { version = "0.32", default-features = false }
-opentelemetry = { version = "0.31", default-features = false }
+tracing-opentelemetry = { version = "0.33", default-features = false }
+opentelemetry = { version = "0.32", default-features = false }
 
 [dev-dependencies]
-opentelemetry-datadog = { version = "0.19", features = ["reqwest-blocking-client"] }
-opentelemetry_sdk = "0.31"
+opentelemetry-datadog = { version = "0.20", features = ["reqwest-blocking-client"] }
+opentelemetry_sdk = "0.32"
 smoothy = "0.8"
 
 [lints.rust]

@@ -5,7 +5,8 @@ use crate::{
     formatting::DatadogLog,
 };
 use chrono::Utc;
-use tracing::{span::Attributes, Event, Id, Subscriber};
+use std::sync::{Arc, OnceLock};
+use tracing::{dispatcher::WeakDispatch, span::Attributes, Dispatch, Event, Id, Subscriber};
 use tracing_subscriber::{layer::Context, registry::LookupSpan, Layer};
 
 /// The layer responsible for formatting tracing events in a way datadog can parse them
@@ -13,6 +14,9 @@ use tracing_subscriber::{layer::Context, registry::LookupSpan, Layer};
 #[derive(Debug, Clone)]
 pub struct DatadogFormattingLayer<Sink: EventSink + 'static> {
     event_sink: Sink,
+    // Captured during `on_register_dispatch` so that `on_event` can ask the OTel
+    // layer for the active OpenTelemetry context via `get_otel_context`.
+    dispatch: Arc<OnceLock<WeakDispatch>>,
 }
 
 impl<S: EventSink + 'static> DatadogFormattingLayer<S> {
@@ -25,8 +29,11 @@ impl<S: EventSink + 'static> DatadogFormattingLayer<S> {
     /// let layer: DatadogFormattingLayer<StdoutSink> =
     ///     DatadogFormattingLayer::with_sink(StdoutSink::default());
     /// ```
-    pub const fn with_sink(sink: S) -> Self {
-        Self { event_sink: sink }
+    pub fn with_sink(sink: S) -> Self {
+        Self {
+            event_sink: sink,
+            dispatch: Arc::new(OnceLock::new()),
+        }
     }
 }
 
@@ -39,6 +46,13 @@ impl Default for DatadogFormattingLayer<StdoutSink> {
 impl<S: Subscriber + for<'a> LookupSpan<'a>, Sink: EventSink + 'static> Layer<S>
     for DatadogFormattingLayer<Sink>
 {
+    fn on_register_dispatch(&self, subscriber: &Dispatch) {
+        // `on_register_dispatch` can fire more than once for a given subscriber if
+        // the layer is reused; subsequent `set` calls return Err and are ignored.
+        #[allow(clippy::let_underscore_must_use, clippy::let_underscore_untyped)]
+        let _ = self.dispatch.set(subscriber.downgrade());
+    }
+
     fn on_new_span(&self, span_attrs: &Attributes<'_>, id: &Id, ctx: Context<'_, S>) {
         #[allow(clippy::expect_used)]
         let span = ctx.span(id).expect("Span not found, this is a bug");
@@ -72,7 +86,7 @@ impl<S: Subscriber + for<'a> LookupSpan<'a>, Sink: EventSink + 'static> Layer<S>
             .collect();
 
         // look for datadog trace- and span-id
-        let datadog_ids = datadog_ids::read_from_context(&ctx);
+        let datadog_ids = datadog_ids::read_from_context(&ctx, self.dispatch.get());
 
         let log = DatadogLog {
             timestamp: Utc::now(),
