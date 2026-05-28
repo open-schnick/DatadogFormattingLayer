@@ -1,6 +1,6 @@
-use opentelemetry::trace::{SpanId, TraceId};
-use tracing::Subscriber;
-use tracing_opentelemetry::OtelData;
+use opentelemetry::trace::{SpanId, TraceContextExt, TraceId};
+use tracing::{dispatcher::WeakDispatch, Subscriber};
+use tracing_opentelemetry::get_otel_context;
 use tracing_subscriber::{layer::Context, registry::LookupSpan};
 
 #[derive(serde::Serialize)]
@@ -38,16 +38,26 @@ impl From<SpanId> for DatadogSpanId {
     }
 }
 
-pub fn read_from_context<S>(ctx: &Context<'_, S>) -> Option<(DatadogTraceId, DatadogSpanId)>
+pub fn read_from_context<S>(
+    ctx: &Context<'_, S>,
+    weak_dispatch: Option<&WeakDispatch>,
+) -> Option<(DatadogTraceId, DatadogSpanId)>
 where
     S: Subscriber + for<'a> LookupSpan<'a>,
 {
-    ctx.lookup_current().and_then(|span_ref| {
-        span_ref.extensions().get::<OtelData>().map(|otel| {
-            let trace_id = otel.trace_id().unwrap_or(TraceId::INVALID);
-            let span_id = otel.span_id().unwrap_or(SpanId::INVALID);
+    let span_ref = ctx.lookup_current()?;
+    let dispatch = weak_dispatch?.upgrade()?;
 
-            (trace_id.into(), span_id.into())
-        })
-    })
+    let otel_cx = get_otel_context(&span_ref.id(), &dispatch)?;
+    let otel_span = otel_cx.span();
+    let span_context = otel_span.span_context();
+
+    let trace_id = span_context.trace_id();
+    let span_id = span_context.span_id();
+
+    if trace_id == TraceId::INVALID && span_id == SpanId::INVALID {
+        return None;
+    }
+
+    Some((trace_id.into(), span_id.into()))
 }
