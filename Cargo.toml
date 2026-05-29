@@ -26,7 +26,7 @@ opentelemetry = { version = "0.31", default-features = false }
 [dev-dependencies]
 opentelemetry-datadog = { version = "0.19", features = ["reqwest-blocking-client"] }
 opentelemetry_sdk = "0.31"
-smoothy = "0.8"
+smoothy = "0.10"
 
 [lints.rust]
 missing_docs = "deny"

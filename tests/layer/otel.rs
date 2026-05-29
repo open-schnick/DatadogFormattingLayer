@@ -147,7 +147,7 @@ pub trait SmoothyExt {
     fn is_valid(self);
 }
 
-impl SmoothyExt for BasicAsserter<Option<u64>> {
+impl SmoothyExt for Asserter<Option<u64>> {
     fn is_valid(self) {
         self.is_some().and_value().is_not(0);
     }
