@@ -6,6 +6,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [7.0.1](https://github.com/open-schnick/DatadogFormattingLayer/compare/v7.0.0...v7.0.1) - 2026-05-31
+
+### Other
+
+- update actions
+- check formatting with taplo
+- fmt with taplo
+- *(deps)* upgrade smoothy
+
 ## [7.0.0](https://github.com/open-schnick/DatadogFormattingLayer/compare/v6.0.0...v7.0.0) - 2025-11-12
 
 ### Fixed
