@@ -6,6 +6,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [8.0.0](https://github.com/open-schnick/DatadogFormattingLayer/compare/v7.0.0...v8.0.0) - 2026-07-22
+
+### Other
+
+- *(deps)* [**breaking**] Upgrade to opentelemetry 0.32
+- update actions
+- check formatting with taplo
+- fmt with taplo
+- *(deps)* upgrade smoothy
+
 ## [7.0.0](https://github.com/open-schnick/DatadogFormattingLayer/compare/v6.0.0...v7.0.0) - 2025-11-12
 
 ### Fixed
